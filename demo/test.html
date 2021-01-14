@@ -1,0 +1,19 @@
+<div>
+
+    <i>input 'foo'</i>
+    <input tng-model="foo" type="text">
+
+    <i>span bind to 'foo'</i>
+    <span tng-bind="foo"></span><br>
+
+    <button tng-click="button">show YES!</button><br>
+
+    <div tng-if="show">
+        <h1>YES!</h1>
+    </div>
+
+    <div tng-repeat="item in list">
+        <span tng-bind="item.msg"></span>
+    </div>
+
+</div>
