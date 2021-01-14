@@ -4,7 +4,7 @@ client side javascript web app framework in nim (js)
 
 ### About
 
-It's like angular or veu.js but made in `nim` and uses `json` to pass data between javascript and the nim code.
+It's like angular or vuejs but made in `nim` and uses `json` to pass data between javascript and the nim code.
 
 ### Changes
 
