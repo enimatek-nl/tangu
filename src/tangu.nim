@@ -1,6 +1,15 @@
 import json, dom
 from strutils import split
 
+#[
+TODOS:
+- Fix method execution - scan childern for methods as well (mix parent scopes into child scopes)
+- Get the correct scope within a method (repeat has child scopes which should be passed to parent functions)
+- Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
+- Push/pop pages and store correct scopes in cache?
+- Test the animated css for pop/push?
+]#
+
 type
     Tangu* = ref object
         directives: seq[Tdirective]
@@ -32,6 +41,7 @@ type
         model*: JsonNode
         methods*: seq[Tmethod]
         children: seq[Tscope]
+        parent: Tscope
         subscriptions: seq[Tsubscription]
 
 #
@@ -50,8 +60,13 @@ proc digest*(self: Tscope) =
                 subscription.callback(self, self.model{splt})
 
 proc clone*(self: Tscope): Tscope =
-    result = Tscope()
+    result = Tscope(parent: self)
     self.children.add(result)
+
+proc destroy*(self: Tscope) =
+    let i = self.parent.children.find(self)
+    if i != -1:
+        self.parent.children.delete(i)
 
 #
 # Tangu object
@@ -128,9 +143,9 @@ proc tngIf*(): Tdirective =
 
             scope.subscribe(
                 Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
-                echo "recheck!"
-                check()
-            )
+                    echo "recheck!"
+                    check()
+                )
             )
 
             pending.list.add(check)
@@ -187,6 +202,7 @@ proc tngRepeat*(): Tdirective =
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             let parts = valueOf.split(" in ")
             let parentNode = node.parentNode
+            var scopes: seq[Tscope] = @[]
 
             proc render(arr: JsonNode, firstRun: bool) =
                 if arr.kind == JArray:
@@ -199,13 +215,17 @@ proc tngRepeat*(): Tdirective =
                         for n in nominated:
                             parentNode.removeChild(n)
 
+                        for i in 0 .. scopes.len - 1: scopes[0].destroy() # clean traces of the previous scopes
+                        scopes = @[]
+
                         for item in arr.to(seq[JsonNode]):
                             let clone = node.cloneNode(true)
                             clone.removeAttribute("tng-repeat")
                             clone.setAttribute("tng-repeat-item", "")
                             parentNode.appendChild(clone)
                             let child_scope = scope.clone()
-                            child_scope.model = %* {parts[0]: item}
+                            scopes.add(child_scope)
+                            child_scope.model = %*{parts[0]: item}
                             self.compile(child_scope, clone, Tpending())
 
                     if firstRun:
@@ -214,7 +234,7 @@ proc tngRepeat*(): Tdirective =
                         work()
 
 
-            scope.subscribe(Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
+            scope.subscribe(Tsubscription(name: parts[1], callback: proc (scope: Tscope, value: JsonNode) =
                 render(value, false)
             ))
 
