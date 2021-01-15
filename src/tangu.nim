@@ -3,8 +3,8 @@ from strutils import split
 
 #[
 TODOS:
-- Fix method execution - scan childern for methods as well (mix parent scopes into child scopes)
-- Get the correct scope within a method (repeat has child scopes which should be passed to parent functions)
+X Fix method execution - scan childern for methods as well (mix parent scopes into child scopes)
+X Get the correct scope within a method (repeat has child scopes which should be passed to parent functions)
 - Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
 - Push/pop pages and store correct scopes in cache?
 - Test the animated css for pop/push?
@@ -68,6 +68,14 @@ proc destroy*(self: Tscope) =
     if i != -1:
         self.parent.children.delete(i)
 
+proc exec(self: Tscope, n: string, s: Tscope) =
+    for m in self.methods:
+        if m.n == n:
+            m.f(s)
+            return
+    if not self.parent.isNil:
+        self.parent.exec(n, s)
+
 #
 # Tangu object
 #
@@ -80,7 +88,6 @@ proc exec(self: Tangu, scope: Tscope, node: Node, pending: Tpending): bool =
     for attr in node.attributes:
         for dir in self.directives:
             if dir.name == attr.nodeName:
-                echo "during exec of " & $attr.nodeName & " size is " & $scope.methods.len
                 dir.callback(self, scope, node, $attr.nodeValue, pending)
                 if dir.stopOn:
                     return false
@@ -114,7 +121,6 @@ proc pushPage*(self: Tangu, name: string) =
 proc bootstrap*(self: Tangu) =
     let scope = self.newScope("root")
     self.finish(scope, document.children[0])
-    echo "bootstrap is done."
 
 proc newTangu*(directives: seq[Tdirective], controllers: seq[Tcontroller]): Tangu =
     Tangu(directives: directives, controllers: controllers)
@@ -143,7 +149,6 @@ proc tngIf*(): Tdirective =
 
             scope.subscribe(
                 Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
-                    echo "recheck!"
                     check()
                 )
             )
@@ -155,8 +160,7 @@ proc tngClick*(): Tdirective =
     Tdirective(name: "tng-click", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             node.onclick = proc (event: Event) =
-                for m in scope.methods:
-                    if m.n == valueOf: m.f(scope)
+                scope.exec(valueOf, scope)
                 scope.digest()
     )
 
@@ -215,7 +219,7 @@ proc tngRepeat*(): Tdirective =
                         for n in nominated:
                             parentNode.removeChild(n)
 
-                        for i in 0 .. scopes.len - 1: scopes[0].destroy() # clean traces of the previous scopes
+                        for s in scopes: s.destroy() # clean traces of the previous scopes
                         scopes = @[]
 
                         for item in arr.to(seq[JsonNode]):
@@ -223,9 +227,11 @@ proc tngRepeat*(): Tdirective =
                             clone.removeAttribute("tng-repeat")
                             clone.setAttribute("tng-repeat-item", "")
                             parentNode.appendChild(clone)
+
                             let child_scope = scope.clone()
                             scopes.add(child_scope)
                             child_scope.model = %*{parts[0]: item}
+
                             self.compile(child_scope, clone, Tpending())
 
                     if firstRun:
