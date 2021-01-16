@@ -7,7 +7,7 @@ X Fix method execution - scan childern for methods as well (mix parent scopes in
 X Get the correct scope within a method (repeat has child scopes which should be passed to parent functions)
 - Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
 - Push/pop pages and store correct scopes in cache?
-- Test the animated css for pop/push?
+X Test the animated css for pop/push?
 ]#
 
 type
@@ -121,18 +121,49 @@ proc navigate*(self: Tangu, path: string) =
             let controller = self.controller(route.controller)
             let scope = self.newScope(controller.name)
             controller.construct(scope)
-            # TODO: build an element of the innerhtml and animte it 'in' ?
+
+            let elem = document.createElement("div")
+            elem.className = "clone"
+            elem.style.animation = "fadeout 0.5s" # default animation
+            elem.innerHTML = self.root.outerHTML
+            self.root.parentNode.appendChild(elem)
+
+            self.root.style.animation = "slidein 0.5s" # default animation
             self.root.innerHTML = controller.view
             self.finish(scope, self.root)
+
+            self.root.addEventListener("animationend", proc (ev: Event) =
+                elem.remove() # remove the cloned view
+                self.root.style.animation = "" # reset animation on root
+            )
+
             break
 
 proc bootstrap*(self: Tangu) =
+    # Setup basic listeners and such.
     window.addEventListener("hashchange", proc (ev: Event) =
         var hash = $(window.location.hash)
         hash = hash.substr(2, hash.len - 1)
         echo "haschange: navigating to: " & hash
         self.navigate(hash)
     )
+    let style = document.createElement("style")
+    style.innerHTML = """
+        .clone {
+            position: absolute;
+            top: 0; bottom: 0; left: 0; right: 0;
+            margin: auto;
+        }
+        @keyframes fadeout {
+            from {opacity: 1;}
+            to {opacity: 0;}
+        }
+        @keyframes slidein {
+          from {margin-left: 100%;}
+          to {margin-left: 0%;}
+        }
+    """
+    document.head.appendChild(style);
     let scope = self.newScope("root")
     self.finish(scope, document.children[0])
 

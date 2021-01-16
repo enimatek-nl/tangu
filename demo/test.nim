@@ -30,6 +30,13 @@ let testController = Tcontroller(name: "test", view: static_test, construct: pro
     ]
 )
 
+const static_test2 = staticRead("test2.html")
+let test2Controller = Tcontroller(name: "test2", view: static_test2, construct: proc(scope: Tscope) =
+    scope.model = %* {
+        "title": "TEST"
+    }
+)
+
 let tng = newTangu(
     @[
         tngIf(),
@@ -39,9 +46,11 @@ let tng = newTangu(
         tngClick(),
         tngRouter()],
     @[
-        testController],
+        testController,
+        test2Controller],
     @[
-        (path: "/", controller: "test")]
+        (path: "/", controller: "test"),
+        (path: "/hello", controller: "test2")]
 )
 tng.bootstrap()
 
