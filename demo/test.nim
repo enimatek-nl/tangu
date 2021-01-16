@@ -41,6 +41,7 @@ let tng = newTangu(
     @[
         testController],
     @[
-        (path: "/", controller: "test")])
+        (path: "/", controller: "test")]
+)
 tng.bootstrap()
 

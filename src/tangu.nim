@@ -127,6 +127,12 @@ proc navigate*(self: Tangu, path: string) =
             break
 
 proc bootstrap*(self: Tangu) =
+    window.addEventListener("hashchange", proc (ev: Event) =
+        var hash = $(window.location.hash)
+        hash = hash.substr(2, hash.len - 1)
+        echo "haschange: navigating to: " & hash
+        self.navigate(hash)
+    )
     let scope = self.newScope("root")
     self.finish(scope, document.children[0])
 
