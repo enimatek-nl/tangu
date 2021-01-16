@@ -30,6 +30,17 @@ let testController = Tcontroller(name: "test", view: static_test, construct: pro
     ]
 )
 
-let tng = newTangu(@[tngIf(), tngRepeat(), tngBind(), tngModel(), tngClick(), tngRouter()], @[testController])
+let tng = newTangu(
+    @[
+        tngIf(),
+        tngRepeat(),
+        tngBind(),
+        tngModel(),
+        tngClick(),
+        tngRouter()],
+    @[
+        testController],
+    @[
+        (path: "/", controller: "test")])
 tng.bootstrap()
 

@@ -11,9 +11,12 @@ X Get the correct scope within a method (repeat has child scopes which should be
 ]#
 
 type
+    Troute = tuple[path: string, controller: string]
+
     Tangu* = ref object
         directives: seq[Tdirective]
         controllers: seq[Tcontroller]
+        routes: seq[Troute]
         scopes: seq[tuple[n: string, s: Tscope]]
         root*: Node
 
@@ -108,22 +111,27 @@ proc finish(self: Tangu, scope: Tscope, parent: Node) =
     for pen in pending.list:
         pen()
 
-proc pushPage*(self: Tangu, name: string) =
-    block done:
-        for ctrl in self.controllers:
-            if ctrl.name == name:
-                let scope = self.newScope(name)
-                ctrl.construct(scope)
-                self.root.innerHTML = ctrl.view
-                self.finish(scope, self.root)
-                break done
+proc controller(self: Tangu, id: string): Tcontroller =
+    for controller in self.controllers:
+        if controller.name == id: return controller
+
+proc navigate*(self: Tangu, path: string) =
+    for route in self.routes:
+        if route.path == path:
+            let controller = self.controller(route.controller)
+            let scope = self.newScope(controller.name)
+            controller.construct(scope)
+            # TODO: build an element of the innerhtml and animte it 'in' ?
+            self.root.innerHTML = controller.view
+            self.finish(scope, self.root)
+            break
 
 proc bootstrap*(self: Tangu) =
     let scope = self.newScope("root")
     self.finish(scope, document.children[0])
 
-proc newTangu*(directives: seq[Tdirective], controllers: seq[Tcontroller]): Tangu =
-    Tangu(directives: directives, controllers: controllers)
+proc newTangu*(directives: seq[Tdirective], controllers: seq[Tcontroller], routes: seq[Troute]): Tangu =
+    Tangu(directives: directives, controllers: controllers, routes: routes)
 
 #
 # Bindings
@@ -168,7 +176,7 @@ proc tngRouter*(): Tdirective =
     Tdirective(name: "tng-router", stopOn: true, callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             self.root = node
-            self.pushPage(valueOf)
+            self.navigate(valueOf)
     )
 
 proc tngModel*(): Tdirective =
