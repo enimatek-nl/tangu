@@ -3,11 +3,9 @@ from strutils import split
 
 #[
 TODOS:
-X Fix method execution - scan childern for methods as well (mix parent scopes into child scopes)
-X Get the correct scope within a method (repeat has child scopes which should be passed to parent functions)
-X Test the animated css for pop/push?
 - Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
-- Push/pop pages and store correct scopes in cache?
+- Fix scope from cache (make a lifecycle like init and hide / view )
+- Introduce a more central way of configuring the 'root' scope ?
 ]#
 
 type
@@ -60,6 +58,8 @@ proc digest*(self: Tscope) =
             if subscription.last != $self.model{splt}:
                 subscription.last = $self.model{splt}
                 subscription.callback(self, self.model{splt})
+    if not self.parent.isNil:
+        self.parent.digest()
 
 proc clone*(self: Tscope): Tscope =
     result = Tscope(parent: self)
@@ -89,14 +89,15 @@ proc root*(self: Tscope): Tscope =
 #
 
 proc newScope(self: Tangu, name: string): Tscope =
-    var root: Tscope = nil
-    for scope in self.scopes:
-        if scope.n == "root":
-            root = scope.s
-    if root.isNil:
-        echo "New root scope created."
+    var root: Tscope
+    block searchRoot:
+        for scope in self.scopes:
+            if scope.n == "root":
+                root = scope.s
+                break searchRoot
         root = Tscope()
-        self.scopes.add (n: "root", s: result)
+        self.scopes.add (n: "root", s: root)
+        echo "created root scope."
     if name == "root":
         result = root
     else:
@@ -123,8 +124,10 @@ proc finish(self: Tangu, scope: Tscope, parent: Node) =
     let pending = Tpending() # execute this after parent node is done setting up.
     for node in parent.children:
         self.compile(scope, node, pending)
+    # process all pending (out of for-loop) actions
     for pen in pending.list:
         pen()
+    scope.digest()
 
 proc controller(self: Tangu, id: string): Tcontroller =
     for controller in self.controllers:
@@ -138,10 +141,11 @@ proc navigate*(self: Tangu, path: string) =
             controller.construct(scope)
             # clone the current view
             let elem = document.createElement("div")
-            elem.className = "clone"
+            elem.style.position = "absolute"
+            elem.style.margin = "auto"
             elem.style.animation = "fadeout 0.5s" # default animation
             elem.innerHTML = self.root.outerHTML
-            self.root.parentNode.appendChild(elem)
+            self.root.parentNode.insertBefore(elem, self.root)
             # render the new view
             self.root.style.animation = "slidein 0.5s" # default animation
             self.root.innerHTML = controller.view
@@ -151,7 +155,6 @@ proc navigate*(self: Tangu, path: string) =
                 elem.remove()
                 self.root.style.animation = ""
             )
-
             break
 
 proc bootstrap*(self: Tangu) =
@@ -165,11 +168,6 @@ proc bootstrap*(self: Tangu) =
     # setup basic animations (TODO for later)
     let style = document.createElement("style")
     style.innerHTML = """
-        .clone {
-            position: absolute;
-            top: 0; bottom: 0; left: 0; right: 0;
-            margin: auto;
-        }
         @keyframes fadeout {
             from {opacity: 1;}
             to {opacity: 0;}
@@ -180,7 +178,7 @@ proc bootstrap*(self: Tangu) =
         }
     """
     document.head.appendChild(style);
-    let scope = self.newScope("root")
+    let scope = self.newScope("root") # root-scope is created once here 
     self.finish(scope, document.children[0])
     echo "Done bootstrapping tangu-spa"
 
