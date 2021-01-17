@@ -28,6 +28,10 @@ let testController = Tcontroller(name: "test", view: static_test, construct: pro
             echo "within scope: " & scope.model{"todo", "msg"}.str
         )
     ]
+    scope.root().methods = @[
+        (n: "button", f: proc (scope: Tscope) {.closure.} =
+            echo "root clliicckk"
+    )]
 )
 
 const static_test2 = staticRead("test2.html")
