@@ -28,10 +28,7 @@ let testController = Tcontroller(name: "test", view: static_test, construct: pro
             echo "within scope: " & scope.model{"todo", "msg"}.str
         )
     ]
-    scope.root().methods = @[
-        (n: "button", f: proc (scope: Tscope) {.closure.} =
-            echo "root clliicckk"
-    )]
+    scope.root().model = %*{"title": "Todo Overview"}
 )
 
 const static_test2 = staticRead("test2.html")
@@ -39,6 +36,7 @@ let test2Controller = Tcontroller(name: "test2", view: static_test2, construct: 
     scope.model = %* {
         "title": "TEST"
     }
+    scope.root().model = %*{"title": "Todo New"}
 )
 
 let tng = newTangu(
