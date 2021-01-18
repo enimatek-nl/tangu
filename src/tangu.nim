@@ -1,16 +1,25 @@
 import json, dom
-from strutils import split
+from strutils import split, parseInt
+
+#[
+TODOS:
+- Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
+- Fix scope from cache (make a lifecycle like init and hide / view )
+- Introduce a more central way of configuring the 'root' scope ?
+]#
 
 type
+    Troute = tuple[path: string, controller: string]
+
     Tangu* = ref object
         directives: seq[Tdirective]
         controllers: seq[Tcontroller]
+        routes: seq[Troute]
         scopes: seq[tuple[n: string, s: Tscope]]
         root*: Node
 
     Tdirective* = ref object
         name*: string
-        stopOn*: bool # stop on this directive (compile/controller) eg. router needs this
         callback*: proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending)
 
     Tsubscription* = ref object
@@ -32,6 +41,7 @@ type
         model*: JsonNode
         methods*: seq[Tmethod]
         children: seq[Tscope]
+        parent: Tscope
         subscriptions: seq[Tsubscription]
 
 #
@@ -48,61 +58,132 @@ proc digest*(self: Tscope) =
             if subscription.last != $self.model{splt}:
                 subscription.last = $self.model{splt}
                 subscription.callback(self, self.model{splt})
+    if not self.parent.isNil:
+        self.parent.digest()
 
 proc clone*(self: Tscope): Tscope =
-    result = Tscope()
+    result = Tscope(parent: self)
     self.children.add(result)
+
+proc destroy*(self: Tscope) =
+    let i = self.parent.children.find(self)
+    if i != -1:
+        self.parent.children.delete(i)
+
+proc exec(self: Tscope, n: string, s: Tscope) =
+    for m in self.methods:
+        if m.n == n:
+            m.f(s)
+            return
+    if not self.parent.isNil:
+        self.parent.exec(n, s)
+
+proc root*(self: Tscope): Tscope =
+    if not self.parent.isNil:
+        return self.parent.root()
+    else:
+        return self
 
 #
 # Tangu object
 #
 
 proc newScope(self: Tangu, name: string): Tscope =
-    result = Tscope()
-    self.scopes.add (n: name, s: result)
+    var root: Tscope
+    block searchRoot:
+        for scope in self.scopes:
+            if scope.n == "root":
+                root = scope.s
+                break searchRoot
+        root = Tscope(model: %*{})
+        self.scopes.add (n: "root", s: root)
+        echo "created root scope."
+    if name == "root":
+        result = root
+    else:
+        block work:
+            for scope in self.scopes:
+                if scope.n == name:
+                    result = scope.s
+                    break work
+            result = Tscope(model: %*{}, parent: root)
+            self.scopes.add (n: name, s: result)
 
-proc exec(self: Tangu, scope: Tscope, node: Node, pending: Tpending): bool =
+proc exec(self: Tangu, scope: Tscope, node: Node, pending: Tpending) =
     for attr in node.attributes:
         for dir in self.directives:
             if dir.name == attr.nodeName:
-                echo "during exec of " & $attr.nodeName & " size is " & $scope.methods.len
                 dir.callback(self, scope, node, $attr.nodeValue, pending)
-                if dir.stopOn:
-                    return false
-    return true
 
-proc compile(self: Tangu, scope: Tscope, child: Node, pending: Tpending): bool {.discardable.} =
-    if self.exec(scope, child, pending):
-        for node in child.children:
-            if not self.compile(scope, node, pending):
-                return false
-        return true
-    return false
+proc compile(self: Tangu, scope: Tscope, child: Node, pending: Tpending) =
+    self.exec(scope, child, pending)
+    for node in child.children:
+        self.compile(scope, node, pending)
 
 proc finish(self: Tangu, scope: Tscope, parent: Node) =
     let pending = Tpending() # execute this after parent node is done setting up.
     for node in parent.children:
         self.compile(scope, node, pending)
+    # process all pending (out of for-loop) actions
     for pen in pending.list:
         pen()
+    scope.digest()
 
-proc pushPage*(self: Tangu, name: string) =
-    block done:
-        for ctrl in self.controllers:
-            if ctrl.name == name:
-                let scope = self.newScope(name)
-                ctrl.construct(scope)
-                self.root.innerHTML = ctrl.view
-                self.finish(scope, self.root)
-                break done
+proc controller(self: Tangu, id: string): Tcontroller =
+    for controller in self.controllers:
+        if controller.name == id: return controller
+
+proc navigate*(self: Tangu, path: string) =
+    for route in self.routes:
+        if route.path == path:
+            let controller = self.controller(route.controller)
+            let scope = self.newScope(controller.name)
+            controller.construct(scope)
+            # clone the current view
+            let elem = document.createElement("div")
+            elem.style.position = "absolute"
+            elem.style.margin = "auto"
+            elem.style.animation = "fadeout 0.5s" # default animation
+            elem.innerHTML = self.root.outerHTML
+            self.root.parentNode.insertBefore(elem, self.root)
+            # render the new view
+            self.root.style.animation = "slidein 0.5s" # default animation
+            self.root.innerHTML = controller.view
+            self.finish(scope, self.root)
+            # clean up the mess
+            self.root.addEventListener("animationend", proc (ev: Event) =
+                elem.remove()
+                self.root.style.animation = ""
+            )
+            break
 
 proc bootstrap*(self: Tangu) =
-    let scope = self.newScope("root")
+    # setup hashbang navigation
+    window.addEventListener("hashchange", proc (ev: Event) =
+        var hash = $(window.location.hash)
+        echo "hashchange: " & hash
+        hash = hash.substr(2, hash.len - 1)
+        self.navigate(hash)
+    )
+    # setup basic animations (TODO for later)
+    let style = document.createElement("style")
+    style.innerHTML = """
+        @keyframes fadeout {
+            from {opacity: 1;}
+            to {opacity: 0;}
+        }
+        @keyframes slidein {
+          from {margin-left: 100%;}
+          to {margin-left: 0%;}
+        }
+    """
+    document.head.appendChild(style);
+    let scope = self.newScope("root") # root-scope is created once here 
     self.finish(scope, document.children[0])
-    echo "bootstrap is done."
+    echo "Done bootstrapping tangu-spa"
 
-proc newTangu*(directives: seq[Tdirective], controllers: seq[Tcontroller]): Tangu =
-    Tangu(directives: directives, controllers: controllers)
+proc newTangu*(directives: seq[Tdirective], controllers: seq[Tcontroller], routes: seq[Troute]): Tangu =
+    Tangu(directives: directives, controllers: controllers, routes: routes)
 
 #
 # Bindings
@@ -128,9 +209,8 @@ proc tngIf*(): Tdirective =
 
             scope.subscribe(
                 Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
-                echo "recheck!"
-                check()
-            )
+                    check()
+                )
             )
 
             pending.list.add(check)
@@ -140,16 +220,35 @@ proc tngClick*(): Tdirective =
     Tdirective(name: "tng-click", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             node.onclick = proc (event: Event) =
-                for m in scope.methods:
-                    if m.n == valueOf: m.f(scope)
+                scope.exec(valueOf, scope)
                 scope.digest()
     )
 
 proc tngRouter*(): Tdirective =
-    Tdirective(name: "tng-router", stopOn: true, callback:
+    Tdirective(name: "tng-router", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             self.root = node
-            self.pushPage(valueOf)
+            pending.list.add(proc () =
+                window.location.hash = "#!" & valueOf
+                self.navigate(valueOf)
+            )
+    )
+
+proc tngChange*(): Tdirective =
+    Tdirective(name: "tng-change", callback:
+        proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
+            node.onchange = proc (event: Event) =
+                let elem = Element(node)
+                let splt = valueOf.split(".")
+                if not scope.model{splt}.isNil():
+                    if scope.model{splt}.kind == JInt:
+                        scope.model{splt}.num = parseInt($elem.value)
+                    elif scope.model{splt}.kind == JString:
+                        scope.model{splt}.str = $elem.value
+                    elif scope.model{splt}.kind == JBool:
+                        scope.model{splt}.bval = elem.checked
+                scope.digest()
+
     )
 
 proc tngModel*(): Tdirective =
@@ -159,12 +258,17 @@ proc tngModel*(): Tdirective =
             node.onkeyup = proc (event: Event) =
                 let splt = valueOf.split(".")
                 if not scope.model{splt}.isNil():
-                    scope.model{splt}.str = $node.value
+                    if scope.model{splt}.kind == JString:
+                        scope.model{splt}.str = $node.value
+                    elif scope.model{splt}.kind == JBool:
+                        scope.model{splt}.bval = ($node.value == "true")
                 scope.digest()
 
             scope.subscribe(
                 Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
-                node.value = value.to(string))
+                    if value.kind == JString: node.value = value.to(string)
+                    else: node.value = $value
+                )
             )
     )
 
@@ -174,12 +278,15 @@ proc tngBind*(): Tdirective =
 
             scope.subscribe(
                 Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
-                node.innerHTML = value.to(string))
+                    if value.kind == JString: node.innerHTML = value.to(string)
+                    else: node.innerHTML = $value
+                )
             )
 
             let splt = valueOf.split(".")
             if not scope.model{splt}.isNil():
-                node.innerHTML = scope.model{splt}.to(string)
+                if scope.model{splt}.kind == JArray: node.innerHTML = scope.model{splt}.to(string)
+                else: node.innerHTML = $scope.model{splt}
     )
 
 proc tngRepeat*(): Tdirective =
@@ -187,9 +294,10 @@ proc tngRepeat*(): Tdirective =
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             let parts = valueOf.split(" in ")
             let parentNode = node.parentNode
+            var scopes: seq[Tscope] = @[]
 
             proc render(arr: JsonNode, firstRun: bool) =
-                if arr.kind == JArray:
+                if not arr.isNil() and arr.kind == JArray:
                     var nominated: seq[Node] = @[]
                     for child in parentNode.children:
                         if child.hasAttribute("tng-repeat") or child.hasAttribute("tng-repeat-item"):
@@ -199,13 +307,19 @@ proc tngRepeat*(): Tdirective =
                         for n in nominated:
                             parentNode.removeChild(n)
 
+                        for s in scopes: s.destroy() # clean traces of the previous scopes
+                        scopes = @[]
+
                         for item in arr.to(seq[JsonNode]):
                             let clone = node.cloneNode(true)
                             clone.removeAttribute("tng-repeat")
                             clone.setAttribute("tng-repeat-item", "")
                             parentNode.appendChild(clone)
+
                             let child_scope = scope.clone()
-                            child_scope.model = %* {parts[0]: item}
+                            scopes.add(child_scope)
+                            child_scope.model = %*{parts[0]: item}
+
                             self.compile(child_scope, clone, Tpending())
 
                     if firstRun:
@@ -214,7 +328,7 @@ proc tngRepeat*(): Tdirective =
                         work()
 
 
-            scope.subscribe(Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
+            scope.subscribe(Tsubscription(name: parts[1], callback: proc (scope: Tscope, value: JsonNode) =
                 render(value, false)
             ))
 
