@@ -13,7 +13,7 @@ It's like angular, mithril.js or vuejs but made in `nim` and uses `json` to pass
 
 ### About
 
-Tengu is a SPA (single page app framework) the uses the MVC (model view controller) principle. You can make a template in normal `html` and use `Tdirectives` in the html code.
+Tengu is a SPA (single page app framework) that uses the MVC (model view controller) principle. You can make a template in normal `html` and use `Tdirectives` in the html code.
 
 These directives share a `model` that can be used in your code in a `Tcontroller` that you program in normal `nim`
 
