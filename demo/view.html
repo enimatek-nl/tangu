@@ -1,0 +1,25 @@
+<div>
+
+    <div>
+        <div class="card" style="width: 18rem;">
+          <div class="card-body">
+            <h5 class="card-title">Hidden Text</h5>
+            <p tng-if="show" class="card-text">This text was hidden.</p>
+            <a tng-click="show_button" class="btn btn-primary">show content</a>
+          </div>
+        </div>
+    </div>
+    <hr>
+    <div>
+        <a href="#!/add" class="btn btn-dark">Add Todo</a>
+        <hr>
+        <div tng-repeat="todo in todos" class="card">
+          <div class="card-body">
+            <h5 tng-bind="todo.id" class="card-title"></h5>
+            <p tng-bind="todo.content" class="card-text"></p>
+            <a tng-click="del_button" class="btn btn-danger">delete</a>
+          </div>
+        </div>
+    </div>
+
+</div>
