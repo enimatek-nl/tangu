@@ -2,29 +2,19 @@
 <html>
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Material-like CSS (incl icon-fonts and small js) -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-    <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.muicss.com/mui-0.10.3/js/mui.min.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Material-like CSS (incl icon-fonts and small js) -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet"
+    type="text/css" />
+  <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.muicss.com/mui-0.10.3/js/mui.min.js"></script>
 </head>
 
 <body>
-    <!-- root scoped index -->
-    <div class="mui-appbar">
-      <table width="100%">
-        <tr style="vertical-align:middle;">
-          <td class="mui--appbar-height">
-            <i class="mui--text-title fa fa-globe"></i>
-            <span class="mui--text-title" tng-bind="title"></span>
-          </td>
-        </tr>
-      </table>
-    </div>
-    <!-- our router for the controllers -->
-    <div class="mui-container" tng-router="/"></div>
-    <script type="text/javascript" src="todos.js"></script>
+  <!-- our router for the controllers -->
+  <div tng-router="/"></div>
+  <script type="text/javascript" src="todos.js"></script>
 </body>
 
 </html>
