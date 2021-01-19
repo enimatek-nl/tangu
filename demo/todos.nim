@@ -2,9 +2,11 @@ import ../src/tangu, json, dom
 
 const static_test = staticRead("view.html")
 let viewTodosController = Tcontroller(name: "viewTodos", view: static_test, work: proc(scope: Tscope, lifecycle: Tlifecycle) =
+
+    scope.model{"todos"} = scope.root().model{"todos"}
+
     case lifecycle:
         of Tlifecycle.Created:
-            scope.root().model{"title"} = %* "Overview Todos"
             if scope.root().model{"todos"}.isNil(): scope.root().model{"todos"} = %* []
 
             scope.model = %* {
@@ -26,10 +28,8 @@ let viewTodosController = Tcontroller(name: "viewTodos", view: static_test, work
                             break
                 )
             ]
-
         of Tlifecycle.Resumed:
-            scope.model{"todos"} = scope.root().model{"todos"}
-
+            echo "resumed"
         of Tlifecycle.Destroyed:
             echo "destroyed"
 )

@@ -16,6 +16,7 @@ type
         controllers: seq[Tcontroller]
         routes: seq[Troute]
         root: Node
+        previous: Node
         scope: Tscope
 
     Tdirective* = ref object
@@ -34,7 +35,6 @@ type
         name*: string
         view*: string
         work*: proc(scope: Tscope, lifecycle: Tlifecycle)
-        root: Node
         scope: Tscope
 
     Tmethod* = tuple[n: string, f: proc(scope: Tscope)]
@@ -125,35 +125,32 @@ proc controller(self: Tangu, id: string): Tcontroller =
 proc navigate*(self: Tangu, path: string) =
     for route in self.routes:
         if route.path == path:
+            # get the controller and refresh the scope
             let controller = self.controller(route.controller)
             if controller.scope.isNil():
                 controller.scope = newScope(self.scope)
                 controller.work(controller.scope, Tlifecycle.Created)
-                controller.root = self.root.cloneNode(true)
-                self.root.parentNode.appendChild(controller.root)
             else:
                 controller.work(controller.scope, Tlifecycle.Resumed)
-            # (re)render the view.
-            controller.root.innerHTML = controller.view
-            self.finish(controller.scope, controller.root)
-            #
-            self.root.style.display = "none"
-            controller.root.style.display = "block"
-            self.root = controller.root
-            #self.root.parentNode.replaceChild(self.root, controller.root)
-            # clone the current view
-            # let elem = document.createElement("div")
-            # elem.innerHTML = self.root.innerHTML
-            # elem.style.animation = "fadeout 0.5s" # default animation
-            # elem.addEventListener("animationend", proc (ev: Event) =
-            # render the new view
-            #     self.root.style.visibility = "visible"
-            #     self.root.innerHTML = controller.view
-            #     self.finish(scope, self.root)
-            #     elem.remove()
-            # )
-            # self.root.style.visibility = "hidden"
-            # clean up the mess
+
+            # Re create the controllers element view based on the parent node
+            let elem = self.root.cloneNode(true)
+            elem.innerHTML = controller.view
+            elem.style.position = "absolute"
+            elem.style.width = "100%"
+            elem.style.height = "100%"
+            elem.style.animation = "fadein 0.5s" # ----------\
+            if not self.previous.isNil(): #                  |
+                let previous = self.previous #              \/
+                previous.style.animation = "fadeout 0.5s" # these animation can be configured later?
+                elem.addEventListener("animationend", proc (ev: Event) =
+                    # clean up old elements
+                    if ev.target.hasAttribute("tng-router"): previous.remove()
+                )
+            self.root.parentNode.insertBefore(elem, self.root)
+            self.finish(controller.scope, elem)
+            # refer to the previous controller for clean/animation etc. purposes
+            self.previous = elem
             break
 
 proc bootstrap*(self: Tangu) =
@@ -168,8 +165,12 @@ proc bootstrap*(self: Tangu) =
     let style = document.createElement("style")
     style.innerHTML = """
         @keyframes fadeout {
-            from {opacity: 1;}
+            from {opacity: 0.5;}
             to {opacity: 0;}
+        }
+        @keyframes fadein {
+            from {opacity: 0.2; margin-top: 4%;}
+            to {opacity: 1; margin-top: 0%;}
         }
         @keyframes slidein {
           from {margin-left: 100%;}
