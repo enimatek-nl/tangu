@@ -14,7 +14,7 @@ type
 
     Troute = tuple[p: string, c: string, g: Tguard]
 
-    Tmethod* = tuple[n: string, f: proc(scope: Tscope)]
+    Tmethod = tuple[n: string, f: proc(scope: Tscope)]
 
     Tangu* = ref object
         directives: seq[Tdirective]
@@ -27,13 +27,13 @@ type
     Tpending = ref object
         list: seq[proc()]
 
-    Tdirective* = ref object
-        name*: string
+    Tdirective = ref object
+        name: string
         callback*: proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending)
 
-    Tsubscription* = ref object
-        name*: string
-        callback*: proc(scope: Tscope, value: JsonNode)
+    Tsubscription = ref object
+        name: string
+        callback: proc(scope: Tscope, value: JsonNode)
         last: string
 
     TLifecycle* = enum
@@ -41,7 +41,7 @@ type
 
     Twork = proc(scope: Tscope, lifecycle: Tlifecycle)
 
-    Tcontroller* = ref object
+    Tcontroller = ref object
         name: string
         view: string
         work: Twork
@@ -57,6 +57,9 @@ type
 #
 # Route, Conroller, etc..
 #
+
+proc newMethod*(name: string, function: proc (scope: Tscope)): Tmethod =
+    result = (n: name, f: function)
 
 proc newController*(name: string, staticView: static string, work: Twork): Tcontroller =
     result = Tcontroller(name: name, view: staticView, work: work)
@@ -105,7 +108,7 @@ proc root*(self: Tscope): Tscope =
         return self
 
 proc newScope*(p: Tscope = nil): Tscope =
-    result = Tscope(parent: p, model: %*{})
+    result = Tscope(parent: p, model: newJObject())
     if not p.isNil:
         p.children.add(result)
 
@@ -215,7 +218,8 @@ proc tngIf*(): Tdirective =
             let check = proc () =
                 let splt = valueOf.split(".")
                 if not scope.model{splt}.isNil() and (scope.model{splt}.kind == JBool or scope.model{splt}.kind == JInt):
-                    if (scope.model{splt}.kind == JBool and scope.model{splt}.to(bool)) or (scope.model{splt}.kind == JInt and scope.model{splt}.to(int) > 0):
+                    if (scope.model{splt}.kind == JBool and scope.model{splt}.to(bool)) or (scope.model{splt}.kind ==
+                            JInt and scope.model{splt}.to(int) > 0):
                         if not active:
                             parent.appendChild(node)
                             active = true
@@ -335,7 +339,7 @@ proc tngRepeat*(): Tdirective =
 
                             let child_scope = scope.clone()
                             scopes.add(child_scope)
-                            child_scope.model = %*{parts[0]: item}
+                            child_scope.model = %{parts[0]: item}
 
                             self.compile(child_scope, clone, Tpending())
 

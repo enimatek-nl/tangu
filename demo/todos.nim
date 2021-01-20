@@ -9,26 +9,25 @@ let viewTodosController = newController(
 
     case lifecycle:
         of Tlifecycle.Created:
-            if scope.root().model{"todos"}.isNil(): scope.root().model{"todos"} = %* []
+            if scope.root().model{"todos"}.isNil(): scope.root().model{"todos"} = %[]
 
-            scope.model = %* {
+            scope.model = %{
                 "show": false,
                 "intro": "click on the add button to navigate to the add controller",
-                "todos": %*[]
+                "todos": %[]
             }
 
             scope.methods = @[
-                (n: "show_button", f: proc (scope: Tscope) {.closure.} =
-                    echo "clicked me!"
-                    scope.model{"show"} = %* true
-                ),
-
-                (n: "del_button", f: proc (scope: Tscope) {.closure.} =
-                    for i, s in scope.root().model{"todos"}.elems:
-                        if s{"id"}.to(int) == scope.model{"todo", "id"}.to(int):
-                            scope.root().model{"todos"}.elems.delete(i)
-                            break
-                )
+                newMethod("show_button", proc (scope: Tscope) {.closure.} =
+                echo "clicked me!"
+                scope.model{"show"} = %true
+            ),
+                newMethod("del_button", proc (scope: Tscope) {.closure.} =
+                for i, s in scope.root().model{"todos"}.elems:
+                    if s{"id"}.to(int) == scope.model{"todo", "id"}.to(int):
+                        scope.root().model{"todos"}.elems.delete(i)
+                        break
+            )
             ]
 
         of Tlifecycle.Resumed:
@@ -40,7 +39,7 @@ let addTodoController = newController(
     staticRead("add.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) =
 
-    scope.model = %* {
+    scope.model = %{
         "done": false,
         "content": ""
     }
@@ -48,16 +47,14 @@ let addTodoController = newController(
     case lifecycle:
         of Tlifecycle.Created:
             scope.methods = @[
-                (n: "done_button", f: proc (scope: Tscope) {.closure.} =
-
-                    scope.root().model{"todos"}.add( %* {
-                        "id": scope.root().model{"todos"}.len,
-                        "done": scope.model{"done"},
-                        "content": scope.model{"content"}}
-                    )
-
-                    window.location.hash = "#!/"
+                newMethod("done_button", proc (scope: Tscope) =
+                scope.root().model{"todos"}.add( %{
+                    "id": scope.root().model{"todos"}.len,
+                    "done": scope.model{"done"},
+                    "content": scope.model{"content"}}
                 )
+                window.location.hash = "#!/"
+            )
             ]
 
         of Tlifecycle.Resumed:
