@@ -1,14 +1,19 @@
-<div class="mui-appbar">
-  <table width="100%">
-    <tr style="vertical-align:middle;">
-      <td class="mui--appbar-height">
-        <span class="mui--text-title">Login</span>
-      </td>
-    </tr>
-  </table>
-</div>
-<div class="mui-container">
-  <form class="mui-form">
-    <button tng-click="login_button" type="button" class="mui-btn mui-btn--raised">Login</button>
-  </form>
+<header class="sticky">
+  <a href="#" class="logo">Login</a>
+</header>
+
+
+<div class="row padded">
+  <div class="col-sm-12 col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3">
+    <form>
+
+      <div class="input-group vertical">
+        <input type="text" placeholder="Username" />
+        <input type="password" placeholder="Password" />
+      </div>
+
+      <button tng-click="login_button" class="primary">Login</button>
+
+    </form>
+  </div>
 </div>
