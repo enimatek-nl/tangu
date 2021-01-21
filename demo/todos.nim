@@ -17,28 +17,24 @@ let viewTodosController = newController(
 
     if scope.root().model{"todos"}.isNil():
         scope.root().model{"todos"} = %[]
-    scope.model{"todos"} = scope.root().model{"todos"}
+    scope.model{"show"} = %false
 
-    case lifecycle:
-        of Tlifecycle.Created:
+    if lifecycle == Tlifecycle.Created:
 
-            scope.model{"show"} = %false
-            scope.model{"intro"} = %"click on the add button to navigate to the add controller"
+        scope.model{"todos"} = scope.root().model{"todos"} # connect the local 'todos' to the root-scope
+        scope.model{"intro"} = %"click on the add button to navigate to the add controller"
 
-            scope.methods.add newMethod("show_button", proc (scope: Tscope) {.closure.} =
-                echo "clicked me!"
-                scope.model{"show"} = %true
-            )
+        scope.methods.add newMethod("show_button", proc (scope: Tscope) {.closure.} =
+            echo "clicked me!"
+            scope.model{"show"} = %true
+        )
 
-            scope.methods.add newMethod("del_button", proc (scope: Tscope) {.closure.} =
-                for i, s in scope.root().model{"todos"}.elems:
-                    if s{"id"}.to(int) == scope.model{"todo", "id"}.to(int):
-                        scope.root().model{"todos"}.elems.delete(i)
-                        break
-            )
-
-        of Tlifecycle.Resumed:
-            echo "resumed"
+        scope.methods.add newMethod("del_button", proc (scope: Tscope) {.closure.} =
+            for i, s in scope.root().model{"todos"}.elems:
+                if s{"id"}.to(int) == scope.model{"todo", "id"}.to(int):
+                    scope.root().model{"todos"}.elems.delete(i)
+                    break
+        )
 )
 
 let addTodoController = newController(
@@ -46,30 +42,28 @@ let addTodoController = newController(
     staticRead("add.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) =
 
+    # reset the form input
     scope.model{"done"} = %false
     scope.model{"content"} = %""
 
-    case lifecycle:
-        of Tlifecycle.Created:
-            scope.methods.add newMethod("done_button", proc (scope: Tscope) =
+    if lifecycle == Tlifecycle.Created:
+        scope.methods.add newMethod("done_button", proc (scope: Tscope) =
 
-                let todo = newJObject()
-                todo{"id"} = %scope.root().model{"todos"}.len
-                todo{"done"} = scope.model{"done"}
-                todo{"content"} = scope.model{"content"}
+            let todo = newJObject()
+            todo{"id"} = %scope.root().model{"todos"}.len
+            todo{"done"} = scope.model{"done"}
+            todo{"content"} = scope.model{"content"}
 
-                scope.root().model{"todos"}.add(todo)
+            scope.root().model{"todos"}.add(todo)
 
-                window.location.hash = "#!/"
-            )
-
-        of Tlifecycle.Resumed:
-            echo "resumed"
+            window.location.hash = "#!/"
+        )
 )
 
 let auth = newGuard(proc (self: Tguard, cname: string, scope: Tscope): bool =
-    self.hash = "#!/login"
+    # use 'authenticated' in the root scope to guard the controllers
     if scope.isNil or scope.root().model{"authenticated"}.isNil or not scope.root().model{"authenticated"}.to(bool):
+        self.hash = "#!/login"
         return false
     else:
         return true
