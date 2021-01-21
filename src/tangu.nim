@@ -10,7 +10,11 @@ BUGS:
 ]#
 
 type
-    Tguard = ref object # TODO: how to handle??
+    Tauth = proc(self: Tguard, cname: string, scope: Tscope): bool
+
+    Tguard* = ref object
+        hash*: string
+        work: Tauth
 
     Troute = tuple[p: string, c: string, g: Tguard]
 
@@ -64,8 +68,11 @@ proc newMethod*(name: string, function: proc (scope: Tscope)): Tmethod =
 proc newController*(name: string, staticView: static string, work: Twork): Tcontroller =
     result = Tcontroller(name: name, view: staticView, work: work)
 
-proc newRoute*(path: string, controller: string, guard = Tguard()): Troute =
+proc newRoute*(path: string, controller: string, guard: Tguard = nil): Troute =
     result = (p: path, c: controller, g: guard)
+
+proc newGuard*(function: Tauth): Tguard =
+    result = Tguard(work: function)
 
 #
 # Scope object
@@ -146,11 +153,21 @@ proc navigate*(self: Tangu, path: string) =
             if route.p == path:
                 # get the controller and refresh the scope
                 let controller = self.controller(route.c)
+
+                # check the controller guard first
+                if not route.g.isNil and not route.g.work(route.g, controller.name, self.scope):
+                    window.location.hash = route.g.hash
+                    break foundController
+
+                # prepare the scope
+                var lifecycle = Tlifecycle.Created
                 if controller.scope.isNil():
                     controller.scope = newScope(self.scope)
-                    controller.work(controller.scope, Tlifecycle.Created)
                 else:
-                    controller.work(controller.scope, Tlifecycle.Resumed)
+                    lifecycle = Tlifecycle.Resumed
+
+                # continue preparing the scope
+                controller.work(controller.scope, lifecycle)
 
                 # Re create the controllers element view based on the parent node
                 let elem = self.root.cloneNode(true)
@@ -217,7 +234,7 @@ proc tngIf*(): Tdirective =
 
             let check = proc () =
                 let splt = valueOf.split(".")
-                if not scope.model{splt}.isNil() and (scope.model{splt}.kind == JBool or scope.model{splt}.kind == JInt):
+                if not scope.model{splt}.isNil and (scope.model{splt}.kind == JBool or scope.model{splt}.kind == JInt):
                     if (scope.model{splt}.kind == JBool and scope.model{splt}.to(bool)) or (scope.model{splt}.kind ==
                             JInt and scope.model{splt}.to(int) > 0):
                         if not active:
