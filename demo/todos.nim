@@ -26,6 +26,7 @@ let viewTodosController = newController(
 
         scope.methods.add newMethod("show_button", proc (scope: Tscope) {.closure.} =
             echo "clicked me!"
+            window.indexedDB.open("bla.db", 1)
             scope.model{"show"} = %true
         )
 
