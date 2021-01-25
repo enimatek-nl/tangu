@@ -1,13 +1,17 @@
-<div>
-<form>
-  <div class="mb-3">
-    <label class="form-label">Content</label>
-    <input tng-model="content" type="text" class="form-control">
+<header class="sticky">
+  <a href="#!/" class="logo">Create Todo</a>
+</header>
+
+<div class="row padded">
+  <div class="col-sm-12 col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3">
+    <form>
+
+      <div class="input-group vertical">
+        <input tng-model="content" type="text" placeholder="Todo..." />
+        <!-- <input tng-change="done" type="checkbox" /> done -->
+      </div>
+
+      <button tng-click="done_button" class="primary">Add</button>
+    </form>
   </div>
-  <div class="mb-3 form-check">
-    <input tng-change="done" type="checkbox" class="form-check-input">
-    <label class="form-check-label">Done!</label>
-  </div>
-  <button tng-click="done_button" type="button" class="btn btn-primary">Add</button>
-</form>
 </div>
