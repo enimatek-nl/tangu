@@ -1,25 +1,31 @@
-<div>
+<header class="sticky">
+  <a href="#!/" class="logo">Todos</a>
+</header>
 
-    <div>
-        <div class="card" style="width: 18rem;">
-          <div class="card-body">
-            <h5 class="card-title">Hidden Text</h5>
-            <p tng-if="show" class="card-text">This text was hidden.</p>
-            <a tng-click="show_button" class="btn btn-primary">show content</a>
-          </div>
-        </div>
-    </div>
-    <hr>
-    <div>
-        <a href="#!/add" class="btn btn-dark">Add Todo</a>
-        <hr>
-        <div tng-repeat="todo in todos" class="card">
-          <div class="card-body">
-            <h5 tng-bind="todo.id" class="card-title"></h5>
-            <p tng-bind="todo.content" class="card-text"></p>
-            <a tng-click="del_button" class="btn btn-danger">delete</a>
-          </div>
-        </div>
+<div class="row padded">
+  <div class="col-sm-12 col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+
+    <div class="card">
+      <section tng-if="show">
+        <h3>Can you see me?</h3>
+        <p>This section suppose to be hidden!</p>
+      </section>
+      <button tng-click="show_button">show</button>
     </div>
 
+  </div>
+</div>
+
+<div class="row padded">
+  <div class="col-sm-12 col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+    <a href="#!/add" class="button primary">Add +</a>
+
+    <div tng-repeat="todo in todos" class="card fluid">
+      <section>
+        <p tng-bind="todo.content"></p>
+      </section>
+      <button class="secondary" tng-click="del_button">delete</button>
+    </div>
+
+  </div>
 </div>

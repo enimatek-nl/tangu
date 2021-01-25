@@ -1,55 +1,72 @@
 import ../src/tangu, json, dom
 
-const static_test = staticRead("view.html")
-let viewTodosController = Tcontroller(name: "viewTodos", view: static_test, construct: proc(scope: Tscope) =
+let loginController = newController(
+    "login",
+    staticRead("login.html"),
+    proc(scope: Tscope, lifecycle: Tlifecycle) =
+    scope.methods.add newMethod("login_button", proc (scope: Tscope) =
+        scope.root().model{"authenticated"} = %true
+        window.location.hash = "#!/"
+    )
+)
 
-    scope.root().model{"title"} = %* "Overview Todos"
+let viewTodosController = newController(
+    "viewTodos",
+    staticRead("view.html"),
+    proc(scope: Tscope, lifecycle: Tlifecycle) =
 
-    scope.model = %* {
-        "show": false,
-        "intro": "click on the add button to navigate to the add controller",
-        "todos": scope.root().model{"todos"}
-    }
+    if scope.root().model{"todos"}.isNil():
+        scope.root().model{"todos"} = %[]
+    scope.model{"show"} = %false
 
-    scope.methods = @[
-        (n: "show_button", f: proc (scope: Tscope) {.closure.} =
+    if lifecycle == Tlifecycle.Created:
+
+        scope.model{"todos"} = scope.root().model{"todos"} # connect the local 'todos' to the root-scope
+        scope.model{"intro"} = %"click on the add button to navigate to the add controller"
+
+        scope.methods.add newMethod("show_button", proc (scope: Tscope) {.closure.} =
             echo "clicked me!"
-            scope.model{"show"} = %* true
-        ),
+            scope.model{"show"} = %true
+        )
 
-        (n: "del_button", f: proc (scope: Tscope) {.closure.} =
+        scope.methods.add newMethod("del_button", proc (scope: Tscope) {.closure.} =
             for i, s in scope.root().model{"todos"}.elems:
                 if s{"id"}.to(int) == scope.model{"todo", "id"}.to(int):
                     scope.root().model{"todos"}.elems.delete(i)
                     break
         )
-    ]
 )
 
-const static_test2 = staticRead("add.html")
-let addTodoController = Tcontroller(name: "addTodo", view: static_test2, construct: proc(scope: Tscope) =
+let addTodoController = newController(
+    "addTodo",
+    staticRead("add.html"),
+    proc(scope: Tscope, lifecycle: Tlifecycle) =
 
-    scope.root().model{"title"} = %* "Add Todo"
+    # reset the form input
+    scope.model{"done"} = %false
+    scope.model{"content"} = %""
 
-    scope.model = %* {
-        "done": false,
-        "content": "my todo..."
-    }
+    if lifecycle == Tlifecycle.Created:
+        scope.methods.add newMethod("done_button", proc (scope: Tscope) =
 
-    scope.methods = @[
-        (n: "done_button", f: proc (scope: Tscope) {.closure.} =
-            
-            if scope.root().model{"todos"}.isNil(): scope.root().model{"todos"} = %* []
-            
-            scope.root().model{"todos"}.add(%* {
-                "id": scope.root().model{"todos"}.len,
-                "done": scope.model{"done"},
-                "content": scope.model{"content"}}
-            )
+            let todo = newJObject()
+            todo{"id"} = %scope.root().model{"todos"}.len
+            todo{"done"} = scope.model{"done"}
+            todo{"content"} = scope.model{"content"}
+
+            scope.root().model{"todos"}.add(todo)
 
             window.location.hash = "#!/"
         )
-    ]
+)
+
+let auth = newGuard(proc (self: Tguard, cname: string, scope: Tscope): bool =
+    # use 'authenticated' in the root scope to guard the controllers
+    if scope.isNil or scope.root().model{"authenticated"}.isNil or not scope.root().model{"authenticated"}.to(bool):
+        self.hash = "#!/login"
+        return false
+    else:
+        return true
 )
 
 let tng = newTangu(
@@ -62,11 +79,13 @@ let tng = newTangu(
         tngChange(),
         tngRouter()],
     @[
+        loginController,
         viewTodosController,
         addTodoController],
     @[
-        (path: "/", controller: "viewTodos"),
-        (path: "/add", controller: "addTodo")]
+        newRoute("/login", "login"),
+        newRoute("/", "viewTodos", auth),
+        newRoute("/add", "addTodo", auth)]
 )
 tng.bootstrap()
 
