@@ -1,11 +1,17 @@
 import ../src/tangu, jsffi, dom
 
+type
+    Todo = ref object of JsObject
+        id: int
+        content: string
+        done: bool
+
 let loginController = newController(
     "login",
     staticRead("login.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) =
     scope.methods.add newMethod("login_button", proc (scope: Tscope) =
-        scope.root().model["authenticated"] = toJs(true)
+        scope.root().model["authenticated"] = true
         window.location.hash = "#!/"
     )
 )
@@ -16,28 +22,24 @@ let viewTodosController = newController(
     proc(scope: Tscope, lifecycle: Tlifecycle) =
 
     if scope.root().model["todos"].isNil:
-        scope.root().model["todos"] = toJs([])
-    scope.model["show"] = toJs(false)
+        scope.root().model["todos"] = []
+    scope.model["show"] = false
 
     if lifecycle == Tlifecycle.Created:
 
         scope.model["todos"] = scope.root().model["todos"] # connect the local 'todos' to the root-scope
-        scope.model["intro"] = toJs "click on the add button to navigate to the add controller"
+        scope.model["intro"] = "click on the add button to navigate to the add controller"
 
         scope.methods.add newMethod("show_button", proc (scope: Tscope) {.closure.} =
             echo "clicked me!"
-            scope.model["show"] = toJs true
+            scope.model["show"] = true
         )
 
         scope.methods.add newMethod("del_button", proc (scope: Tscope) {.closure.} =
-            var objs = scope.root().model["todos"].to(seq[JsObject])
-            var o = -1
-            for i, s in objs:
-                if s["id"].to(int) == scope.model["todo"]["id"].to(int):
-                    o = i
-            if o != -1:
-                objs.delete(o)
-                discard scope.root().model.set("todos", toJs objs)
+            for i, s in scope.root().model["todos"].to(seq[Todo]):
+                if s.id == scope.model["todo"].to(Todo).id:
+                    scope.root().model.delete("todos", i)
+                    break
         )
 )
 
@@ -47,21 +49,19 @@ let addTodoController = newController(
     proc(scope: Tscope, lifecycle: Tlifecycle) =
 
     # reset the form input
-    scope.model["done"] = toJs false
-    scope.model["content"] = toJs ""
+    scope.model["done"] = false
+    scope.model["content"] = ""
 
     if lifecycle == Tlifecycle.Created:
         scope.methods.add newMethod("done_button", proc (scope: Tscope) =
 
-            let todo = JsObject{
-                id: toJs scope.root().model["todos"].to(seq[JsObject]).len,
-                done: scope.model["done"],
-                content: scope.model["content"]
-            }
+            let todo = Todo(
+                id: scope.root().model["todos"].to(seq[JsObject]).len,
+                done: scope.model["done"].to(bool),
+                content: scope.model["content"].to(string)
+            )
 
-            var obj = scope.root().model["todos"].to(seq[JsObject])
-            obj.add(todo)
-            discard scope.root().model.set("todos", toJs obj)
+            scope.root().model.add("todos", todo)
 
             window.location.hash = "#!/"
         )
@@ -95,4 +95,3 @@ let tng = newTangu(
         newRoute("/add", "addTodo", auth)]
 )
 tng.bootstrap()
-
