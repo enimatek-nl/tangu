@@ -1,14 +1,51 @@
-import json, dom
+import dom, jsffi
 from strutils import split, parseInt
 
-#[
-TODOS:
-    - make a 'factory' kind of service that can 'async' handle eg. http ?
-    - Introduce a more central way of configuring the 'root' scope ?
-BUGS:
-    - Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
-]#
+#
+# Extra DOM/JS bindings
+#
+proc jsIsArray*(x: JsObject): bool {.importcpp: "Array.isArray(#)".}
+proc jsStringify*(x: JsObject): cstring {.importcpp: "JSON.stringify(#)".}
 
+proc set*(self: JsObject, path: string, val: JsObject): bool =
+    ## Look for the `path` in the `JsObject` and overwrite the value
+    var s = self
+    let r = path.split(".")
+    for i, v in r:
+        if s.hasOwnProperty(v):
+            if i == r.len - 1:
+                s[v] = val
+            else:
+                s = s[v]
+        else:
+            return false
+    return true
+
+proc get*(self: JsObject, path: string): JsObject =
+    ## Look for the `path` in the `JsObject` and return the value as `JsObject`
+    var s = self
+    for v in path.split("."):
+        if s.hasOwnProperty(v):
+            s = s[v]
+        else:
+            return
+    result = s
+
+proc add*[T](self: JsObject, path: string, item: T) =
+    ## Easy way to add an object into the `JsObject` defined array
+    var objs = self.get(path).to(seq[T])
+    objs.add(item)
+    discard self.set(path, toJs objs)
+
+proc delete*(self: JsObject, path: string, index: int) =
+    ## Easy way to remove an index from the `JsObject` defined array
+    var objs = self.get(path).to(seq[JsObject])
+    objs.delete(index)
+    discard self.set(path, toJs objs)
+
+#
+# Tangu types
+#
 type
     Tauth = proc(self: Tguard, cname: string, scope: Tscope): bool
 
@@ -37,8 +74,8 @@ type
 
     Tsubscription = ref object
         name: string
-        callback: proc(scope: Tscope, value: JsonNode)
-        last: string
+        callback: proc(scope: Tscope, value: JsObject)
+        last: cstring
 
     TLifecycle* = enum
         Created, Resumed
@@ -52,7 +89,7 @@ type
         scope: Tscope
 
     Tscope* = ref object
-        model*: JsonNode
+        model*: JsObject
         methods*: seq[Tmethod]
         children: seq[Tscope]
         parent: Tscope
@@ -83,11 +120,11 @@ proc subscribe(self: Tscope, subscription: Tsubscription) =
 
 proc digest*(self: Tscope) =
     for subscription in self.subscriptions:
-        let splt = subscription.name.split(".")
-        if not self.model{splt}.isNil:
-            if subscription.last != $self.model{splt}:
-                subscription.last = $self.model{splt}
-                subscription.callback(self, self.model{splt})
+        let v = self.model.get(subscription.name)
+        if not v.isNil:
+            if subscription.last != jsStringify(v):
+                subscription.last = jsStringify(v)
+                subscription.callback(self, v)
     if not self.parent.isNil:
         self.parent.digest()
 
@@ -115,7 +152,7 @@ proc root*(self: Tscope): Tscope =
         return self
 
 proc newScope*(p: Tscope = nil): Tscope =
-    result = Tscope(parent: p, model: newJObject())
+    result = Tscope(parent: p, model: JsObject{})
     if not p.isNil:
         p.children.add(result)
 
@@ -233,20 +270,18 @@ proc tngIf*(): Tdirective =
             var active = true
 
             let check = proc () =
-                let splt = valueOf.split(".")
-                if not scope.model{splt}.isNil and (scope.model{splt}.kind == JBool or scope.model{splt}.kind == JInt):
-                    if (scope.model{splt}.kind == JBool and scope.model{splt}.to(bool)) or (scope.model{splt}.kind ==
-                            JInt and scope.model{splt}.to(int) > 0):
-                        if not active:
-                            parent.appendChild(node)
-                            active = true
-                    else:
-                        if active:
-                            parent.removeChild(node)
-                            active = false
+                let jsval = scope.model.get(valueOf)
+                if not jsval.isNil and jsval.to(bool):
+                    if not active:
+                        parent.appendChild(node)
+                        active = true
+                else:
+                    if active:
+                        parent.removeChild(node)
+                        active = false
 
             scope.subscribe(
-                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
+                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) =
                 check()
             )
             )
@@ -277,16 +312,10 @@ proc tngChange*(): Tdirective =
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             node.onchange = proc (event: Event) =
                 let elem = Element(node)
-                let splt = valueOf.split(".")
-                if not scope.model{splt}.isNil():
-                    if scope.model{splt}.kind == JInt:
-                        scope.model{splt}.num = parseInt($elem.value)
-                    elif scope.model{splt}.kind == JString:
-                        scope.model{splt}.str = $elem.value
-                    elif scope.model{splt}.kind == JBool:
-                        scope.model{splt}.bval = elem.checked
-                scope.digest()
-
+                if scope.model.set(valueOf, toJs(elem.value)):
+                    scope.digest()
+                else:
+                    echo valueOf & " not found"
     )
 
 proc tngModel*(): Tdirective =
@@ -294,18 +323,14 @@ proc tngModel*(): Tdirective =
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
 
             node.onkeyup = proc (event: Event) =
-                let splt = valueOf.split(".")
-                if not scope.model{splt}.isNil():
-                    if scope.model{splt}.kind == JString:
-                        scope.model{splt}.str = $node.value
-                    elif scope.model{splt}.kind == JBool:
-                        scope.model{splt}.bval = ($node.value == "true")
-                scope.digest()
+                if scope.model.set(valueOf, toJs(node.value)):
+                    scope.digest()
 
             scope.subscribe(
-                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
-                if value.kind == JString: node.value = value.to(string)
-                else: node.value = $value
+                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) =
+                #if value.kind == JString: node.value = value.to(string)
+                #else: node.value = $value
+                node.value = value.to(cstring)
             )
             )
     )
@@ -315,16 +340,16 @@ proc tngBind*(): Tdirective =
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
 
             scope.subscribe(
-                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
-                if value.kind == JString: node.innerHTML = value.to(string)
-                else: node.innerHTML = $value
+                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) =
+                #if value.kind == JString: node.innerHTML = value.to(string)
+                #else: node.innerHTML = $value
+                node.value = value.to(cstring)
             )
             )
 
-            let splt = valueOf.split(".")
-            if not scope.model{splt}.isNil():
-                if scope.model{splt}.kind == JArray: node.innerHTML = scope.model{splt}.to(string)
-                else: node.innerHTML = $scope.model{splt}
+            let obj = scope.model.get(valueOf)
+            if not obj.isNil:
+                node.innerHTML = obj.to(cstring)
     )
 
 proc tngRepeat*(): Tdirective =
@@ -334,8 +359,8 @@ proc tngRepeat*(): Tdirective =
             let parentNode = node.parentNode
             var scopes: seq[Tscope] = @[]
 
-            proc render(arr: JsonNode, firstRun: bool) =
-                if not arr.isNil() and arr.kind == JArray:
+            proc render(arr: JsObject, firstRun: bool) =
+                if not arr.isNil and jsIsArray(arr):
                     var nominated: seq[Node] = @[]
                     for child in parentNode.children:
                         if child.hasAttribute("tng-repeat") or child.hasAttribute("tng-repeat-item"):
@@ -348,7 +373,7 @@ proc tngRepeat*(): Tdirective =
                         for s in scopes: s.destroy() # clean traces of the previous scopes
                         scopes = @[]
 
-                        for item in arr.to(seq[JsonNode]):
+                        for item in arr.to(seq[JsObject]):
                             let clone = node.cloneNode(true)
                             clone.removeAttribute("tng-repeat")
                             clone.setAttribute("tng-repeat-item", "")
@@ -356,7 +381,8 @@ proc tngRepeat*(): Tdirective =
 
                             let child_scope = scope.clone()
                             scopes.add(child_scope)
-                            child_scope.model = %{parts[0]: item}
+
+                            child_scope.model = JsObject{$parts[0]: item}
 
                             self.compile(child_scope, clone, Tpending())
 
@@ -366,11 +392,11 @@ proc tngRepeat*(): Tdirective =
                         work()
 
 
-            scope.subscribe(Tsubscription(name: parts[1], callback: proc (scope: Tscope, value: JsonNode) =
+            scope.subscribe(Tsubscription(name: parts[1], callback: proc (scope: Tscope, value: JsObject) =
                 render(value, false)
             ))
 
-            let splt = parts[1].split(".") # collectionName
-            if not scope.model{splt}.isNil():
-                render(scope.model{splt}, true)
+            let obj = scope.model.get(parts[1])
+            if not obj.isNil:
+                render(obj, true)
     )
