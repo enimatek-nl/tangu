@@ -369,7 +369,7 @@ proc tngRepeat*(): Tdirective =
                         for s in scopes: s.destroy() # clean traces of the previous scopes
                         scopes = @[]
 
-                        for item in arr.to(seq[JsonNode]):
+                        for item in arr.to(seq[JsObject]):
                             let clone = node.cloneNode(true)
                             clone.removeAttribute("tng-repeat")
                             clone.setAttribute("tng-repeat-item", "")
@@ -377,7 +377,8 @@ proc tngRepeat*(): Tdirective =
 
                             let child_scope = scope.clone()
                             scopes.add(child_scope)
-                            child_scope.model = %{parts[0]: item}
+
+                            child_scope.model = JsObject{$parts[0]: item}
 
                             self.compile(child_scope, clone, Tpending())
 
@@ -391,7 +392,7 @@ proc tngRepeat*(): Tdirective =
                 render(value, false)
             ))
 
-            let splt = parts[1].split(".") # collectionName
-            if not scope.model{splt}.isNil():
-                render(scope.model{splt}, true)
+            let obj = scope.model.get(parts[1])
+            if not obj.isNil:
+                render(obj, true)
     )
