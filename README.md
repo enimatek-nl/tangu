@@ -13,8 +13,9 @@ Check the [Releases](https://github.com/enimatek-nl/tangu/releases) for details 
 ### Documentation
 Check out the [wiki](https://github.com/enimatek-nl/tangu/wiki) to get information about:
 
-  - [routing](https://github.com/enimatek-nl/tangu/wiki/Routing)
-  - [directives](https://github.com/enimatek-nl/tangu/wiki/Directives)
+  - [standard directives](https://github.com/enimatek-nl/tangu/wiki/Standard-Directives)
+  - [routing and guards](https://github.com/enimatek-nl/tangu/wiki/Routing-and-Guards)
+  - [scope and lifecycle](https://github.com/enimatek-nl/tangu/wiki/Scope-and-Lifecycle)
 
 #### Roadmap
 Planned features and research subjects to complete the framework as a production usable thing.
@@ -24,9 +25,8 @@ Planned features and research subjects to complete the framework as a production
 - [X] create a central `root()` scope configuration
 - [X] authentication `guard` paradigm 
 - [X] rebuild core based on `jsffi`
+- [X] add `fetch` with async/await capabilities
 - [ ] implement a default indexedDB service for persisting `JsObject`
-- [ ] implement a default  'factory' kind of service that can 'async' handle eg. http ?
-- [ ] research the `service` / `singlton` paradigm 
 - [ ] implement a base service for PWA management (?)
 - [ ] improve and add directives
 - [ ] research cordova compatibility
