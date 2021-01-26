@@ -1,8 +1,8 @@
-import dom, jsffi
+import dom, jsffi, asyncjs, tables
 from strutils import split, parseInt
 
 #
-# Extra DOM/JS bindings
+# Helpfull DOM / JS bindings
 #
 proc jsIsArray*(x: JsObject): bool {.importcpp: "Array.isArray(#)".}
 proc jsStringify*(x: JsObject): cstring {.importcpp: "JSON.stringify(#)".}
@@ -44,6 +44,31 @@ proc delete*(self: JsObject, path: string, index: int) =
     discard self.set(path, toJs objs)
 
 #
+# (basic) Fetch definitions
+#
+type
+    FetchResponse = ref object of RootObj
+        url: cstring
+        ok: bool
+        status: cint
+        statusText: cstring
+        headers: JsObject
+
+    FetchOptions = ref object of RootObj
+        `method`*: cstring
+        mode*: cstring
+        cache*: cstring
+        credentials*: cstring
+        headers*: JsObject
+        redirect*: cstring
+        referrerPolicy*: cstring
+        body*: cstring
+
+proc fetch*(url: cstring): Future[FetchResponse] {.importcpp: "fetch(#)".}
+proc json*(self: FetchResponse): Future[JsObject] {.importcpp.}
+proc text*(self: FetchResponse): Future[cstring] {.importcpp.}
+
+#
 # Tangu types
 #
 type
@@ -54,8 +79,6 @@ type
         work: Tauth
 
     Troute = tuple[p: string, c: string, g: Tguard]
-
-    Tmethod = tuple[n: string, f: proc(scope: Tscope)]
 
     Tangu* = ref object
         directives: seq[Tdirective]
@@ -90,7 +113,6 @@ type
 
     Tscope* = ref object
         model*: JsObject
-        methods*: seq[Tmethod]
         children: seq[Tscope]
         parent: Tscope
         subscriptions: seq[Tsubscription]
@@ -98,9 +120,6 @@ type
 #
 # Route, Conroller, etc..
 #
-
-proc newMethod*(name: string, function: proc (scope: Tscope)): Tmethod =
-    result = (n: name, f: function)
 
 proc newController*(name: string, staticView: static string, work: Twork): Tcontroller =
     result = Tcontroller(name: name, view: staticView, work: work)
@@ -138,12 +157,17 @@ proc destroy*(self: Tscope) =
         self.parent.children.delete(i)
 
 proc exec(self: Tscope, n: string, s: Tscope) =
-    for m in self.methods:
-        if m.n == n:
-            m.f(s)
-            return
-    if not self.parent.isNil:
+    if not self.model.get(n).isNil:
+        var f = self.model.get(n).to(proc(scope: Tscope))
+        f(s)
+    elif not self.parent.isNil:
         self.parent.exec(n, s)
+    # for m in self.methods:
+    #     if m.n == n:
+    #         m.f(s)
+    #         return
+    # if not self.parent.isNil:
+    #     self.parent.exec(n, s)
 
 proc root*(self: Tscope): Tscope =
     if not self.parent.isNil:
@@ -327,11 +351,7 @@ proc tngModel*(): Tdirective =
                     scope.digest()
 
             scope.subscribe(
-                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) =
-                #if value.kind == JString: node.value = value.to(string)
-                #else: node.value = $value
-                node.value = value.to(cstring)
-            )
+                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) = node.value = value.to(cstring))
             )
     )
 
@@ -340,11 +360,7 @@ proc tngBind*(): Tdirective =
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
 
             scope.subscribe(
-                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) =
-                #if value.kind == JString: node.innerHTML = value.to(string)
-                #else: node.innerHTML = $value
-                node.value = value.to(cstring)
-            )
+                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) = node.value = value.to(cstring))
             )
 
             let obj = scope.model.get(valueOf)
