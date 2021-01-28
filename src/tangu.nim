@@ -138,7 +138,6 @@ proc newGuard*(function: Tauth): Tguard =
 #
 # Scope object
 #
-
 proc subscribe(self: Tscope, subscription: Tsubscription) =
     self.subscriptions.add(subscription)
 
@@ -161,18 +160,12 @@ proc destroy*(self: Tscope) =
     if i != -1:
         self.parent.children.delete(i)
 
-proc exec(self: Tscope, n: string, s: Tscope) =
-    if not self.model.get(n).isNil:
-        var f = self.model.get(n).to(proc(scope: Tscope))
-        f(s)
+proc exec(self: Tscope, v: string, s: Tscope, n: Node) =
+    if not self.model.get(v).isNil:
+        var f = self.model.get(v).to(proc(scope: Tscope, node: Node))
+        f(s, n)
     elif not self.parent.isNil:
-        self.parent.exec(n, s)
-    # for m in self.methods:
-    #     if m.n == n:
-    #         m.f(s)
-    #         return
-    # if not self.parent.isNil:
-    #     self.parent.exec(n, s)
+        self.parent.exec(v, s, n)
 
 proc root*(self: Tscope): Tscope =
     if not self.parent.isNil:
@@ -188,7 +181,6 @@ proc newScope*(p: Tscope = nil): Tscope =
 #
 # Tangu object
 #
-
 proc exec(self: Tangu, scope: Tscope, node: Node, pending: Tpending) =
     for attr in node.attributes:
         for dir in self.directives:
@@ -291,7 +283,6 @@ proc newTangu*(directives: seq[Tdirective], controllers: seq[Tcontroller], route
 #
 # Bindings
 #
-
 proc tngIf*(): Tdirective =
     Tdirective(name: "tng-if", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
@@ -325,7 +316,7 @@ proc tngClick*(): Tdirective =
     Tdirective(name: "tng-click", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             node.onclick = proc (event: Event) =
-                scope.exec(valueOf, scope)
+                scope.exec(valueOf, scope, node)
                 scope.digest()
     )
 
@@ -343,16 +334,19 @@ proc tngChange*(): Tdirective =
     Tdirective(name: "tng-change", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             node.onchange = proc (event: Event) =
-                let elem = Element(node)
-                if scope.model.set(valueOf, toJs(elem.value)):
-                    scope.digest()
-                else:
-                    echo valueOf & " not found"
+                scope.exec(valueOf, scope, node)
+                scope.digest()
     )
 
 proc tngModel*(): Tdirective =
     Tdirective(name: "tng-model", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
+
+            node.onchange = proc (event: Event) =
+                let elem = Element(node)
+                if $elem.getAttribute("type") == "checkbox":
+                    if scope.model.set(valueOf, toJs(elem.value)):
+                        scope.digest()
 
             node.onkeyup = proc (event: Event) =
                 if scope.model.set(valueOf, toJs(node.value)):
@@ -431,3 +425,4 @@ proc tngRepeat*(): Tdirective =
             if not obj.isNil:
                 render(obj, true)
     )
+
