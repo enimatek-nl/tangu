@@ -6,6 +6,11 @@ from strutils import split, parseInt
 #
 proc jsIsArray*(x: JsObject): bool {.importcpp: "Array.isArray(#)".}
 proc jsStringify*(x: JsObject): cstring {.importcpp: "JSON.stringify(#)".}
+proc jsTimestamp*(): cint {.importcpp: "Date.now()".}
+proc jsHexId*(): cstring {.importcpp: "Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)".}
+
+proc genId(): string =
+    result = $jsHexId() & "-" & $jsHexId() & "-" & $jsHexId() & "-" & $jsHexId()
 
 proc set*(self: JsObject, path: string, val: JsObject): bool =
     ## Look for the `path` in the `JsObject` and overwrite the value
@@ -291,23 +296,26 @@ proc tngIf*(): Tdirective =
     Tdirective(name: "tng-if", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             let parent = node.parentNode
-            var active = true
+            # replace the node with a placeholder to remember the position for ever
+            let id = genId()
+            let placeholder = document.createElement("template")
+            placeholder.setAttribute("tng-id", id)
+            parent.replaceChild(placeholder, node)
+            var active = false
 
             let check = proc () =
                 let jsval = scope.model.get(valueOf)
                 if not jsval.isNil and jsval.to(bool):
                     if not active:
-                        parent.appendChild(node)
+                        parent.insertBefore(node, placeholder)
                         active = true
                 else:
                     if active:
                         parent.removeChild(node)
                         active = false
 
-            scope.subscribe(
-                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) =
-                check()
-            )
+            scope.subscribe(Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) =
+                check())
             )
 
             pending.list.add(check)
@@ -372,7 +380,13 @@ proc tngRepeat*(): Tdirective =
     Tdirective(name: "tng-repeat", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             let parts = valueOf.split(" in ")
+            # keep track of the position and childern of the repeat by use of a placeholder and ids
+            let id = genId()
+            let placeholder = document.createElement("template")
+            placeholder.setAttribute("tng-id", id)
             let parentNode = node.parentNode
+            parentNode.replaceChild(placeholder, node)
+
             var scopes: seq[Tscope] = @[]
 
             proc render(arr: JsObject, firstRun: bool) =
@@ -380,7 +394,7 @@ proc tngRepeat*(): Tdirective =
                     var nominated: seq[Node] = @[]
                     for child in parentNode.children:
                         if child.hasAttribute("tng-repeat") or child.hasAttribute("tng-repeat-item"):
-                            nominated.add(child)
+                            if child == node or child.getAttribute("tng-id") == id: nominated.add(child)
 
                     let work = proc () =
                         for n in nominated:
@@ -393,7 +407,8 @@ proc tngRepeat*(): Tdirective =
                             let clone = node.cloneNode(true)
                             clone.removeAttribute("tng-repeat")
                             clone.setAttribute("tng-repeat-item", "")
-                            parentNode.appendChild(clone)
+                            clone.setAttribute("tng-id", id)
+                            parentNode.insertBefore(clone, placeholder)
 
                             let child_scope = scope.clone()
                             scopes.add(child_scope)
