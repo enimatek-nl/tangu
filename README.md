@@ -33,5 +33,5 @@ Planned features and research subjects to complete the framework as a production
 - [ ] add `nimble` tasks and / or cli to run a local server
 
 ### Issues
-- [ ] Fix how `Node` directive replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
+- [X] Fix how `Node` directive replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
 - [ ] Introduce a more central way of configuring the 'root' scope during setup (?)
