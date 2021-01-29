@@ -31,10 +31,10 @@
       <button class="secondary" tng-click="del_button">delete</button>
     </div>
 
-    <div tng-repeat="extra in extras" class="card fluid">
-      <section>
-        <p tng-bind="extra.text"></p>
-      </section>
+    <div  class="card fluid">
+        <select tng-model="selected">
+            <option tng-repeat="extra in extras" tng-attr="selected when extra.selected" tng-bind="extra.text"></option>
+        </select>
     </div>
 
   </div>
