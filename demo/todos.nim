@@ -1,4 +1,5 @@
-import ../src/tangu, asyncjs, jsffi, dom
+import asyncjs, jsffi, dom
+import ../src/tangu
 
 type
     Todo = ref object of JsObject
@@ -8,13 +9,14 @@ type
 
     Extra = ref object of JsObject
         text: cstring
+        selected: bool
 
 let loginController = newController(
     "login",
     staticRead("login.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) =
 
-    scope.model.login_button = bindMethod proc (that: JsObject, scope: Tscope, node: Node) {.async.} =
+    scope.model.login_button = bindMethod proc (that: JsObject) {.async.} =
         scope.root().model.authenticated = true
         window.location.hash = "#!/"
 
@@ -33,10 +35,12 @@ let viewTodosController = newController(
 
         scope.model.todos = scope.root().model.todos # connect the local 'todos' to the root-scope
         scope.model.intro = "click on the add button to navigate to the add controller"
+        scope.model.selected = "abc"
 
         scope.model.extras = [
-            Extra(text: "bla"),
-            Extra(text: "werkt dit?")
+            Extra(text: "nested", selected: false),
+            Extra(text: "repeat", selected: false),
+            Extra(text: "tag", selected: true)
         ]
 
         scope.model.fetch_data = bindMethod proc (that: JsObject, scope: Tscope, node: Node) {.async.} =
@@ -44,7 +48,7 @@ let viewTodosController = newController(
             echo await response.text()
 
         scope.model.show_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) =
-            echo "clicked me!"
+            echo "clicked me! " & scope.model.selected.to(cstring)
             scope.model.show = true
 
         scope.model.del_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) =
@@ -88,6 +92,7 @@ let auth = newGuard(proc (self: Tguard, cname: string, scope: Tscope): bool =
 let tng = newTangu(
     @[
         tngIf(),
+        tngAttr(),
         tngRepeat(),
         tngBind(),
         tngModel(),
