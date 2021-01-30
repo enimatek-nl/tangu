@@ -8,7 +8,6 @@ proc jsIsArray*(x: JsObject): bool {.importcpp: "Array.isArray(#)".}
 proc jsStringify*(x: JsObject): cstring {.importcpp: "JSON.stringify(#)".}
 proc jsTimestamp*(): cint {.importcpp: "Date.now()".}
 proc jsHexId*(): cstring {.importcpp: "Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)".}
-
 proc genId(): string =
     result = $jsHexId() & "-" & $jsHexId() & "-" & $jsHexId() & "-" & $jsHexId()
 
