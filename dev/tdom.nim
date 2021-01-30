@@ -1,4 +1,15 @@
-import dom, jsffi
+import dom, jsffi, asyncjs
+
+type
+    MediaDevices {.importc.} = ref object of EventTarget
+
+    MediaStream {.importc.} = ref object of RootObj
+
+    NavigatorMD* = ref object of Navigator
+        mediaDevices*: MediaDevices
+
+proc getUserMedia*(self: MediaDevices, constraints: JsObject): Future[MediaStream] {.importcpp.}
+proc setStream*(self: Element, stream: MediaStream) {.importcpp: "#.srcObject = #".}
 
 type
     IndexedDB {.importc.} = ref object of RootObj
@@ -49,8 +60,13 @@ proc add*(self: IDBObjectStore, value: JsObject) {.importcpp.}
 proc add*(self: IDBObjectStore, value: JsObject, key: JsObject) {.importcpp.}
 
 var window* {.importc, nodecl.}: WindowDB
+var navigator* {.importc, nodecl.}: NavigatorMD
 
-when isMainModule:
+proc main(): Future[void] {.async.} =
+    let stream = await navigator.mediaDevices.getUserMedia(JsObject{video: true})
+    let elem = document.getElementById("video")
+    elem.setStream(stream)
+
     let request = window.indexedDB.open("test.db")
 
     request.onupgradeneeded = proc (event: Event) =
@@ -67,3 +83,7 @@ when isMainModule:
 
     request.onerror = proc (event: Event) =
         echo "error"
+
+
+when isMainModule:
+    let a = main()
