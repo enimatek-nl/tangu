@@ -4,6 +4,7 @@ from strutils import split, parseInt
 #
 # Helpfull DOM / JS bindings
 #
+proc jsHasServiceworker(): bool {.importcpp: "'serviceWorker' in navigator".}
 proc jsIsArray*(x: JsObject): bool {.importcpp: "Array.isArray(#)".}
 proc jsStringify*(x: JsObject): cstring {.importcpp: "JSON.stringify(#)".}
 proc jsTimestamp*(): cint {.importcpp: "Date.now()".}

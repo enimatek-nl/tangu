@@ -5,8 +5,14 @@ type
 
     MediaStream {.importc.} = ref object of RootObj
 
+    ServiceWorkerContainer {.importc.} = ref object of RootObj
+    ServiceWorkerRegistration {.importc.} = ref object of RootObj
+
     NavigatorMD* = ref object of Navigator
         mediaDevices*: MediaDevices
+        serviceWorker*: ServiceWorkerContainer
+
+proc register*(self: ServiceWorkerContainer, scriptURL: cstring): Future[ServiceWorkerRegistration] {.importcpp.}
 
 proc getUserMedia*(self: MediaDevices, constraints: JsObject): Future[MediaStream] {.importcpp.}
 proc setStream*(self: Element, stream: MediaStream) {.importcpp: "#.srcObject = #".}

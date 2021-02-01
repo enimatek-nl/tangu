@@ -2,12 +2,12 @@ import asyncjs, jsffi, dom
 import ../src/tangu
 
 type
-    Todo = ref object of JsObject
+    Todo = ref object
         id: int
         content: string
         done: bool
 
-    Extra = ref object of JsObject
+    Extra = ref object
         text: cstring
         selected: bool
 
