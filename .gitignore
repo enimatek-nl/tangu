@@ -1,4 +1,4 @@
-demo/*.js
-dev/*.js
+tests/*.js
+examples/*.js
 .idea/
 lsp/
