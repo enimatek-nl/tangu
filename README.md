@@ -29,9 +29,9 @@ Planned features and research subjects to complete the framework as a production
 - [X] implement a default indexedDB service for persisting `JsObject`
 - [ ] implement a base service for PWA management (?)
 - [ ] improve and add directives
-- [ ] research cordova compatibility
 - [X] add `nimble` tasks 
 - [ ] cli to run a local server or setup project
+- [ ] research cordova compatibility
 
 ### Issues
 - [X] Fix how `Node` directive replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
