@@ -26,11 +26,12 @@ Planned features and research subjects to complete the framework as a production
 - [X] authentication `guard` paradigm 
 - [X] rebuild core based on `jsffi`
 - [X] add `fetch` with async/await capabilities
-- [ ] implement a default indexedDB service for persisting `JsObject`
+- [X] implement a default indexedDB service for persisting `JsObject`
 - [ ] implement a base service for PWA management (?)
 - [ ] improve and add directives
 - [ ] research cordova compatibility
-- [ ] add `nimble` tasks and / or cli to run a local server
+- [X] add `nimble` tasks 
+- [ ] cli to run a local server or setup project
 
 ### Issues
 - [X] Fix how `Node` directive replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)

@@ -1,5 +1,4 @@
-import asyncjs, jsffi, dom
-import ../src/tangu
+import asyncjs, jsffi, dom, tangu, tangu/fetch, tangu/mediadevices
 
 type
     Todo = ref object
@@ -43,15 +42,20 @@ let viewTodosController = newController(
             Extra(text: "tag", selected: true)
         ]
 
-        scope.model.fetch_data = bindMethod proc (that: JsObject, scope: Tscope, node: Node) {.async.} =
+        scope.model.start_camera = bindMethod proc (that: JsObject) {.async.} =
+            let stream = await mediaDevices().getUserMedia(JsObject{video: true})
+            let elem = document.getElementById("video")
+            elem.setStream(stream)
+
+        scope.model.fetch_data = bindMethod proc (that: JsObject) {.async.} =
             let response = await fetch("https://google.nl")
             echo await response.text()
 
-        scope.model.show_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) =
+        scope.model.show_button = bindMethod proc(that: JsObject) =
             echo "clicked me! " & scope.model.selected.to(cstring)
             scope.model.show = true
 
-        scope.model.del_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) =
+        scope.model.del_button = bindMethod proc(that: JsObject, scope: Tscope) =
             for i, s in scope.root().model.todos.to(seq[Todo]):
                 if s.id == scope.model.todo.to(Todo).id:
                     scope.root().model.delete("todos", i)
