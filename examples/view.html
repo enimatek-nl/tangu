@@ -5,19 +5,9 @@
 <div class="row padded">
   <div class="col-sm-12 col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
 
-    <div class="card">
-        <video id="video" width="640" height="480" autoplay></video>
-        <button tng-click="start_camera">Start camera!</button>
-    </div>
-
-    <div class="card">
-      <button tng-click="save_db">save</button>
-      <button tng-click="load_db">load</button>
-    </div>
-
-    <div class="card">
-      <button tng-click="fetch_data">Fetch data!</button>
-    </div>
+    <video id="video" width="320" height="240" autoplay></video>
+    <button tng-click="start_camera">Start camera!</button>
+    <button tng-click="fetch_data">Fetch data!</button>
 
     <div class="card">
       <section tng-if="show">

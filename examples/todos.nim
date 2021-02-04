@@ -1,38 +1,36 @@
-import asyncjs, jsffi, dom, tangu, tangu/fetch, tangu/mediadevices, tangu/indexeddb
+import asyncjs, jsffi, dom, sugar, tangu, tangu/fetch, tangu/mediadevices, tangu/indexeddb
 
 type
-    Todo = ref object of JsObject
-        id: cint
+    Todo = ref object
+        id: cstring
         content: cstring
         done: bool
 
-    Extra = ref object of JsObject
+    Extra = ref object
         text: cstring
         selected: bool
 
 let loginController = newController(
     "login",
     staticRead("login.html"),
-    proc(scope: Tscope, lifecycle: Tlifecycle) =
+    proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
     scope.model.login_button = bindMethod proc (that: JsObject) {.async.} =
         scope.root().model.authenticated = true
         window.location.hash = "#!/"
-
 )
 
 let viewTodosController = newController(
     "viewTodos",
     staticRead("view.html"),
-    proc(scope: Tscope, lifecycle: Tlifecycle) =
+    proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
-    if scope.root().model.todos.isNil:
-        scope.root().model.todos = []
+    scope.model.todos = await indexedDB().getAll("todos")
+
     scope.model.show = false
 
     if lifecycle == Tlifecycle.Created:
 
-        scope.model.todos = scope.root().model.todos # connect the local 'todos' to the root-scope
         scope.model.intro = "click on the add button to navigate to the add controller"
         scope.model.selected = "abc"
 
@@ -41,15 +39,6 @@ let viewTodosController = newController(
             Extra(text: "repeat", selected: false),
             Extra(text: "tag", selected: true)
         ]
-
-        scope.model.save_db = bindMethod proc (that: JsObject) {.async.} =
-            let ok = await saveToIndexedDB("todos", Todo(id: 1, content: "asd", done: false))
-            echo "save to db " & $ok
-
-        scope.model.load_db = bindMethod proc (that: JsObject) {.async.} =
-            let item = await loadFromIndexedDB("todos", 1)
-            echo jsStringify(item)
-            echo "load from db"
 
         scope.model.start_camera = bindMethod proc (that: JsObject) {.async.} =
             let stream = await mediaDevices().getUserMedia(JsObject{video: true})
@@ -63,34 +52,37 @@ let viewTodosController = newController(
         scope.model.show_button = bindMethod proc(that: JsObject) =
             echo "clicked me! " & scope.model.selected.to(cstring)
             scope.model.show = true
+            scope.digest()
 
-        scope.model.del_button = bindMethod proc(that: JsObject, scope: Tscope) =
-            for i, s in scope.root().model.todos.to(seq[Todo]):
-                if s.id == scope.model.todo.to(Todo).id:
-                    scope.root().model.delete("todos", i)
-                    break
+        scope.model.del_button = bindMethod proc(that: JsObject, scolp: Tscope) {.async.} =
+            let todo = scolp.model.todo.to(Todo)
+            let ok = await indexedDB().delete("todos", todo.id)
+            if ok:
+                scope.model.todos = await indexedDB().getAll("todos")
+                scope.digest()
 )
 
 let addTodoController = newController(
     "addTodo",
     staticRead("add.html"),
-    proc(scope: Tscope, lifecycle: Tlifecycle) =
+    proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
     # reset the form input
     scope.model.done = false
     scope.model.content = ""
 
     if lifecycle == Tlifecycle.Created:
-        scope.model.done_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) =
+        scope.model.done_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) {.async.} =
             let todo = Todo(
-                id: cint scope.root().model.todos.to(seq[JsObject]).len,
+                id: genId(),
                 done: scope.model.done.to(bool),
                 content: scope.model.content.to(cstring)
             )
 
-            scope.root().model.add("todos", todo)
+            let ok = await indexedDB().put("todos", toJs todo)
 
-            window.location.hash = "#!/"
+            if ok:
+                window.location.hash = "#!/"
 )
 
 let auth = newGuard(proc (self: Tguard, cname: string, scope: Tscope): bool =
