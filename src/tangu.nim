@@ -1,4 +1,4 @@
-import dom, jsffi, tables
+import dom, jsffi, tables, sugar, asyncjs
 from strutils import split, parseInt
 
 #
@@ -9,7 +9,7 @@ proc jsIsArray*(x: JsObject): bool {.importcpp: "Array.isArray(#)".}
 proc jsStringify*(x: JsObject): cstring {.importcpp: "JSON.stringify(#)".}
 proc jsTimestamp*(): cint {.importcpp: "Date.now()".}
 proc jsHexId*(): cstring {.importcpp: "Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)".}
-proc genId(): string =
+proc genId*(): string =
     result = $jsHexId() & "-" & $jsHexId() & "-" & $jsHexId() & "-" & $jsHexId()
 
 proc set*(self: JsObject, path: string, val: JsObject): bool =
@@ -84,7 +84,7 @@ type
     TLifecycle* = enum
         Created, Resumed
 
-    Twork = proc(scope: Tscope, lifecycle: Tlifecycle)
+    Twork = (scope: Tscope, lifecycle: Tlifecycle) -> Future[void]
 
     Tcontroller = ref object
         name: string
@@ -138,7 +138,8 @@ proc destroy*(self: Tscope) =
 
 proc exec(self: Tscope, v: string, s: Tscope, n: Node) =
     if not self.model.get(v).isNil:
-        var f = self.model.get(v).to(proc(scope: Tscope, node: Node))
+        # call the js binded function with a local-scope and a ref to the node
+        var f = self.model.get(v).to(proc(scolp: Tscope, node: Node))
         f(s, n)
     elif not self.parent.isNil:
         self.parent.exec(v, s, n)
@@ -181,7 +182,7 @@ proc controller(self: Tangu, id: string): Tcontroller =
     for controller in self.controllers:
         if controller.name == id: return controller
 
-proc navigate*(self: Tangu, path: string) =
+proc navigate*(self: Tangu, path: string) {.async.} =
     block foundController:
         for route in self.routes:
             if route.p == path:
@@ -201,7 +202,7 @@ proc navigate*(self: Tangu, path: string) =
                     lifecycle = Tlifecycle.Resumed
 
                 # continue preparing the scope
-                controller.work(controller.scope, lifecycle)
+                await controller.work(controller.scope, lifecycle)
 
                 # Re create the controllers element view based on the parent node
                 let elem = self.root.cloneNode(true)
@@ -230,7 +231,7 @@ proc bootstrap*(self: Tangu) =
         var hash = $(window.location.hash)
         echo "hashchange: " & hash
         hash = hash.substr(2, hash.len - 1)
-        self.navigate(hash)
+        discard self.navigate(hash)
     )
     # setup basic animations (TODO for later)
     let style = document.createElement("style")
@@ -293,7 +294,6 @@ proc tngClick*(): Tdirective =
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             node.onclick = proc (event: Event) =
                 scope.exec(valueOf, scope, node)
-                scope.digest()
     )
 
 proc tngRouter*(): Tdirective =
@@ -302,7 +302,7 @@ proc tngRouter*(): Tdirective =
             self.root = node
             pending.list.add(proc () =
                 window.location.hash = "#!" & valueOf
-                self.navigate(valueOf)
+                discard self.navigate(valueOf)
             )
     )
 
