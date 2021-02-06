@@ -1,14 +1,25 @@
-
-<nav class="navbar is-fixed-top is-dark" role="navigation" aria-label="main navigation">
-    <div class="navbar-brand">
-    </div>
-    <div class="navbar-menu is-active">
-      <div class="navbar-start">
-      </div>
-      <div class="navbar-end">
-      </div>
-    </div>
+<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Todos</a>
+    <a class="btn btn-outline-success" href="#!/add"><i class="bi bi-plus"></i></a>
+  </div>
 </nav>
+
+<main class="container">
+
+    <div tng-repeat="todo in todos" class="card text-dark bg-warning mb-3">
+      <div class="card-header">Todo</div>
+      <div class="card-body">
+        <p tng-bind="todo.content" class="card-text"></p>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2 col-6 mx-auto">
+          <button tng-click="del_button" class="btn btn-danger">remove</button> 
+        </div>
+      </div>
+    </div>
+
+</main>
 
 <div class="container">
  <div class="section">
@@ -29,18 +40,6 @@
             <p>This section suppose to be hidden!</p>
           </section>
           <button class="button is-block is-fullwidth" tng-click="show_button">show</button>
-        </div>
-    </div>
-
-
-    <div tng-repeat="todo in todos" class="column is-4">
-        <div class="card is-large">
-         <div class="select">
-          <section>
-            <p tng-bind="todo.content"></p>
-          </section>
-         </div>
-          <button class="button is-block is-fullwidth is-primary" tng-click="del_button">delete</button>
         </div>
     </div>
 

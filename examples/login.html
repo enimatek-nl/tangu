@@ -1,37 +1,19 @@
-<nav class="navbar is-fixed-top is-dark" role="navigation" aria-label="main navigation">
-  <div class="navbar-brand">
-    <!-- navbar items, navbar burger... -->
+<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Login</a>
   </div>
 </nav>
 
-<div class="container">
-<div class="section">
+<main class="container text-center">
+    <div class="bg-light p-5 rounded">
+    <form>
+        <label for="inputEmail" class="visually-hidden">Email address</label>
+        <input type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
 
-    <div class="field">
-      <p class="control has-icons-left has-icons-right">
-        <input class="input" type="email" placeholder="Email">
-        <span class="icon is-small is-left">
-          <i class="fas fa-envelope"></i>
-        </span>
-      </p>
+        <label for="inputPassword" class="visually-hidden">Password</label>
+        <input type="password" id="inputPassword" class="form-control" placeholder="Password" required>
+
+        <button class="w-100 btn btn-lg btn-primary" type="submit" tng-click="login_button">Sign in</button>
+    </form>
     </div>
-
-    <div class="field">
-      <p class="control has-icons-left">
-        <input class="input" type="password" placeholder="Password">
-        <span class="icon is-small is-left">
-          <i class="fas fa-lock"></i>
-        </span>
-      </p>
-    </div>
-
-    <div class="field">
-      <p class="control">
-        <button class="button is-block is-fullwidth is-success" tng-click="login_button">
-          Login
-        </button>
-      </p>
-    </div>
-
-</div>
-</div>
+</main>
