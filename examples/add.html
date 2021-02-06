@@ -1,17 +1,13 @@
-<header class="sticky">
-  <a href="#!/" class="logo">Create Todo</a>
-</header>
-
-<div class="row padded">
-  <div class="col-sm-12 col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3">
-    <form>
-
-      <div class="input-group vertical">
-        <input tng-model="content" type="text" placeholder="Todo..." />
-        <input tng-model="done" type="checkbox" />
-      </div>
-
-      <button tng-click="done_button" class="primary">Add</button>
-    </form>
+<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+  <div class="container-fluid">
+     <a class="btn btn-outline-light" href="#!/"><i class="bi bi-caret-left"></i>Cancel</a>
+     <button tng-click="done_button" class="btn btn-outline-success">Done</button>
   </div>
-</div>
+</nav>
+
+<main class="container">
+    <div class="form-floating">
+      <textarea tng-model="content" style="height: 320px;" class="form-control" placeholder="I need to..." id="floatingTextarea"></textarea>
+      <label for="floatingTextarea">I need to...</label>
+    </div>
+</main>
