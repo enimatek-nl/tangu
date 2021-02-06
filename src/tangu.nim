@@ -311,7 +311,7 @@ proc tngChange*(): Tdirective =
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             node.onchange = proc (event: Event) =
                 scope.exec(valueOf, scope, node)
-                scope.digest()
+                #scope.digest()
     )
 
 proc tngModel*(): Tdirective =

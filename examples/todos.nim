@@ -1,4 +1,4 @@
-import asyncjs, jsffi, dom, sugar, tangu, tangu/fetch, tangu/mediadevices, tangu/indexeddb
+import asyncjs, sequtils, jsffi, dom, sugar, tangu, tangu/fetch, tangu/mediadevices, tangu/indexeddb
 
 type
     Todo = ref object
@@ -35,24 +35,27 @@ let viewTodosController = newController(
         scope.model.selected = "abc"
 
         scope.model.extras = [
-            Extra(text: "nested", selected: false),
-            Extra(text: "repeat", selected: false),
-            Extra(text: "tag", selected: true)
+            Extra(text: "undone", selected: false),
+            Extra(text: "done", selected: false),
+            Extra(text: "all", selected: true)
         ]
+
+        scope.model.new_filter = bindMethod proc (that: JsObject, scolp: Tscope, node: Node) {.async.} =
+            let todos = (await indexedDB().getAll("todos")).to(seq[Todo])
+            
+            if $node.value == "undone":
+                scope.model.todos = todos.filterIt(it.done == false)
+            elif $node.value == "done":
+                scope.model.todos = todos.filterIt(it.done == true)
+            else:
+                scope.model.todos = todos
+
+            scope.digest()
 
         scope.model.start_camera = bindMethod proc (that: JsObject) {.async.} =
             let stream = await mediaDevices().getUserMedia(JsObject{video: true})
             let elem = document.getElementById("video")
             elem.setStream(stream)
-
-        scope.model.fetch_data = bindMethod proc (that: JsObject) {.async.} =
-            let response = await fetch("https://google.nl")
-            echo await response.text()
-
-        scope.model.show_button = bindMethod proc(that: JsObject) =
-            echo "clicked me! " & scope.model.selected.to(cstring)
-            scope.model.show = true
-            scope.digest()
 
         scope.model.del_button = bindMethod proc(that: JsObject, scolp: Tscope) {.async.} =
             let todo = scolp.model.todo.to(Todo)
@@ -60,6 +63,12 @@ let viewTodosController = newController(
             if ok:
                 scope.model.todos = await indexedDB().getAll("todos")
                 scope.digest()
+        
+        scope.model.check_todo = bindMethod proc(that: JsObject, scolp: Tscope) {.async.} =
+            let todo = scolp.model.todo.to(Todo)
+            scolp.model.todo.done = not scolp.model.todo.done
+            discard await indexedDB().put("todos", toJs todo)
+            
 )
 
 let addTodoController = newController(
@@ -75,13 +84,11 @@ let addTodoController = newController(
         scope.model.done_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) {.async.} =
             let todo = Todo(
                 id: genId(),
-                done: scope.model.done.to(bool),
+                done: true,
                 content: scope.model.content.to(cstring)
             )
 
-            let ok = await indexedDB().put("todos", toJs todo)
-
-            if ok:
+            if await indexedDB().put("todos", toJs todo):
                 window.location.hash = "#!/"
 )
 
