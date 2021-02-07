@@ -81,8 +81,8 @@ type
         callback: proc(scope: Tscope, value: JsObject)
         last: cstring
 
-    TLifecycle* = enum
-        Created, Resumed
+    Tlifecycle* = enum
+        Created, Resumed, Initialized
 
     Twork = (scope: Tscope, lifecycle: Tlifecycle) -> Future[void]
 
@@ -195,14 +195,12 @@ proc navigate*(self: Tangu, path: string) {.async.} =
                     break foundController
 
                 # prepare the scope
-                var lifecycle = Tlifecycle.Created
                 if controller.scope.isNil():
                     controller.scope = newScope(self.scope)
-                else:
-                    lifecycle = Tlifecycle.Resumed
+                    await controller.work(controller.scope, Tlifecycle.Created)
 
                 # continue preparing the scope
-                await controller.work(controller.scope, lifecycle)
+                await controller.work(controller.scope, Tlifecycle.Resumed)
 
                 # Re create the controllers element view based on the parent node
                 let elem = self.root.cloneNode(true)
@@ -222,6 +220,8 @@ proc navigate*(self: Tangu, path: string) {.async.} =
                 self.finish(controller.scope, elem)
                 # refer to the previous controller for clean/animation etc. purposes
                 self.previous = elem
+                # run code after the view is part of the dom
+                await controller.work(controller.scope, Tlifecycle.Initialized)
                 break foundController
         echo "!! no controller found for path: " & path
 
