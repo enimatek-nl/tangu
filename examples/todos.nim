@@ -1,4 +1,5 @@
-import asyncjs, sequtils, jsffi, dom, sugar, tangu, tangu/fetch, tangu/mediadevices, tangu/indexeddb
+import asyncjs, sequtils, jsffi, dom
+import tangu, tangu/fetch, tangu/mediadevices, tangu/indexeddb
 
 type
     Todo = ref object
@@ -15,9 +16,9 @@ let loginController = newController(
     staticRead("login.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
-    scope.model.login_button = bindMethod proc (that: JsObject) {.async.} =
-        scope.root().model.authenticated = true
-        window.location.hash = "#!/"
+        scope.model.login_button = bindMethod proc (that: JsObject) {.async.} =
+            scope.root().model.authenticated = true
+            window.location.hash = "#!/"
 )
 
 let viewTodosController = newController(
@@ -25,49 +26,48 @@ let viewTodosController = newController(
     staticRead("view.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
-    scope.model.todos = await indexedDB().getAll("todos")
+        scope.model.todos = await indexedDB().getAll("todos")
 
-    scope.model.show = false
+        if lifecycle == Tlifecycle.Created:
 
-    if lifecycle == Tlifecycle.Created:
+            proc doFilter(scope: Tscope) {.async.} =
+                let todos = (await indexedDB().getAll("todos")).to(seq[Todo])
+                
+                if scope.model.filter.to(string) == "undone":
+                    scope.model.todos = todos.filterIt(it.done == false)
+                elif scope.model.filter.to(string) == "done":
+                    scope.model.todos = todos.filterIt(it.done == true)
+                else:
+                    scope.model.todos = todos
 
-        scope.model.intro = "click on the add button to navigate to the add controller"
-        scope.model.selected = "abc"
-
-        scope.model.extras = [
-            Extra(text: "undone", selected: false),
-            Extra(text: "done", selected: false),
-            Extra(text: "all", selected: true)
-        ]
-
-        scope.model.new_filter = bindMethod proc (that: JsObject, scolp: Tscope, node: Node) {.async.} =
-            let todos = (await indexedDB().getAll("todos")).to(seq[Todo])
-            
-            if $node.value == "undone":
-                scope.model.todos = todos.filterIt(it.done == false)
-            elif $node.value == "done":
-                scope.model.todos = todos.filterIt(it.done == true)
-            else:
-                scope.model.todos = todos
-
-            scope.digest()
-
-        scope.model.start_camera = bindMethod proc (that: JsObject) {.async.} =
-            let stream = await mediaDevices().getUserMedia(JsObject{video: true})
-            let elem = document.getElementById("video")
-            elem.setStream(stream)
-
-        scope.model.del_button = bindMethod proc(that: JsObject, scolp: Tscope) {.async.} =
-            let todo = scolp.model.todo.to(Todo)
-            let ok = await indexedDB().delete("todos", todo.id)
-            if ok:
-                scope.model.todos = await indexedDB().getAll("todos")
                 scope.digest()
-        
-        scope.model.check_todo = bindMethod proc(that: JsObject, scolp: Tscope) {.async.} =
-            let todo = scolp.model.todo.to(Todo)
-            scolp.model.todo.done = not scolp.model.todo.done
-            discard await indexedDB().put("todos", toJs todo)
+
+            scope.model.filter = "all"
+            scope.model.intro = "click on the add button to navigate to the add controller"
+            scope.model.selected = "abc"
+
+            scope.model.extras = [
+                Extra(text: "undone", selected: false),
+                Extra(text: "done", selected: false),
+                Extra(text: "all", selected: true)
+            ]
+
+            scope.model.new_filter = bindMethod proc (that: JsObject, scolp: Tscope, node: Node) {.async.} =
+                scope.model.filter = $node.value
+                await doFilter(scope)
+
+            scope.model.del_button = bindMethod proc(that: JsObject, scolp: Tscope) {.async.} =
+                let todo = scolp.model.todo.to(Todo)
+                let ok = await indexedDB().delete("todos", todo.id)
+                if ok:
+                    scope.model.todos = await indexedDB().getAll("todos")
+                    scope.digest()
+            
+            scope.model.check_todo = bindMethod proc(that: JsObject, scolp: Tscope) {.async.} =
+                let todo = scolp.model.todo.to(Todo)
+                scolp.model.todo.done = not scolp.model.todo.done
+                discard await indexedDB().put("todos", toJs todo)
+                await doFilter(scope)
             
 )
 
@@ -76,21 +76,42 @@ let addTodoController = newController(
     staticRead("add.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
-    # reset the form input
-    scope.model.done = false
-    scope.model.content = ""
+        # reset the form input
+        scope.model.done = false
+        scope.model.content = ""
 
-    if lifecycle == Tlifecycle.Created:
-        scope.model.done_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) {.async.} =
-            let todo = Todo(
-                id: genId(),
-                done: true,
-                content: scope.model.content.to(cstring)
-            )
+        if lifecycle == Tlifecycle.Created:
 
-            if await indexedDB().put("todos", toJs todo):
-                window.location.hash = "#!/"
+            scope.model.camera_button = bindMethod proc (that: JsObject) {.async.} =
+                echo "STUB; cache current input and go to view..."
+                window.location.hash = "#!/camera"
+
+            scope.model.done_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) {.async.} =
+                let todo = Todo(
+                    id: genId(),
+                    done: true,
+                    content: scope.model.content.to(cstring)
+                )
+
+                if await indexedDB().put("todos", toJs todo):
+                    window.location.hash = "#!/"
 )
+
+
+let cameraTodoController = newController(
+    "cameraTodo",
+    staticRead("camera.html"),
+    proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
+
+        scope.model.add_button = bindMethod proc (that: JsObject) {.async.} =
+            echo "add!"
+
+        scope.model.start_button = bindMethod proc (that: JsObject) {.async.} =
+            let stream = await mediaDevices().getUserMedia(JsObject{video: true})
+            let elem = document.getElementById("video")
+            elem.setStream(stream)
+)
+
 
 let auth = newGuard(proc (self: Tguard, cname: string, scope: Tscope): bool =
     # use 'authenticated' in the root scope to guard the controllers
@@ -114,10 +135,12 @@ let tng = newTangu(
     @[
         loginController,
         viewTodosController,
-        addTodoController],
+        addTodoController,
+        cameraTodoController],
     @[
         newRoute("/login", "login"),
         newRoute("/", "viewTodos", auth),
-        newRoute("/add", "addTodo", auth)]
+        newRoute("/add", "addTodo", auth),
+        newRoute("/camera", "cameraTodo", auth)]
 )
 tng.bootstrap()
