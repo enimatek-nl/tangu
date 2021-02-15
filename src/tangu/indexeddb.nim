@@ -7,7 +7,7 @@ type
     #    readOnly = "readonly", readWrite = "readwrite", versionChange = "versionchange"
 
     IDBOptions = ref object of RootObj
-        autoIncrement: cint
+        autoIncrement: bool
         keyPath: cstring
 
     IDBTransaction {.importc.} = ref object of RootObj
@@ -23,7 +23,7 @@ type
         indexNames: seq[cstring]
         name: cstring
         transaction: IDBTransaction
-        autoIncrement: cint
+        autoIncrement: bool
 
     IDBRequest {.importc.} = ref object of RootObj 
         onerror*: proc (event: Event) {.closure.}
@@ -52,47 +52,69 @@ proc close(self: IDBDatabase) {.importcpp.}
 
 proc objectStore(self: IDBTransaction, name: cstring): IDBObjectStore {.importcpp.}
 
-proc add(self: IDBObjectStore, value: JsObject) {.importcpp.}
-proc add(self: IDBObjectStore, value: JsObject, key: JsObject) {.importcpp.}
-proc get(self: IDBObjectStore, id: cint): JsObject {.importcpp.}
+proc add(self: IDBObjectStore, value: JsObject): IDBRequest {.importcpp.}
+proc get(self: IDBObjectStore, id: cint): IDBRequest {.importcpp.}
+proc getAll(self: IDBObjectStore): IDBRequest {.importcpp.}
 proc put(self: IDBObjectStore, value: JsObject): IDBRequest {.importcpp.}
+proc delete(self: IDBObjectStore, key: cstring): IDBRequest {.importcpp.}
 
-proc loadFromIndexedDB*(storeName: cstring, id: cint): Future[JsObject] =
+proc getAll*(indexedDB: IndexedDB, storeName: cstring): Future[JsObject] =
     var promise = newPromise() do (resolve: proc(response: JsObject)):
-        let request = indexedDB().open(storeName)
+        let request = indexedDB.open(storeName)
         request.onerror = proc (event: Event) =
-            echo "error"
+            resolve(nil)
         request.onupgradeneeded = proc (event: Event) =
-            echo "upgrade"
+            let database = request.result
+            discard database.createObjectStore(storeName, IDBOptions(autoIncrement: true, keyPath: "id"))
+            echo "upgraded getAll"
         request.onsuccess = proc (event: Event) =
             let database = request.result
             let transaction = database.transaction(storeName, "readonly")
             let obj_store = transaction.objectStore(storeName)
-            let obj_req = obj_store.get(id)
+            let obj_req = obj_store.getAll()
             obj_req.onerror = proc (event: Event) =
-                echo "error"
+                resolve(nil)
             obj_req.onsuccess = proc (event: Event) =
-                echo "success"
                 resolve(obj_req.result)
     return promise
 
-proc saveToIndexedDB*(storeName: cstring, obj: JsObject): Future[bool] =
+proc put*(indexedDB: IndexedDB, storeName: cstring, obj: JsObject): Future[bool] =
     var promise = newPromise() do (resolve: proc(response: bool)):
-        let request = indexedDB().open(storeName)
+        let request = indexedDB.open(storeName)
         request.onerror = proc (event: Event) =
-            echo "error"
+            resolve(false)
         request.onupgradeneeded = proc (event: Event) =
             let database = request.result
-            discard database.createObjectStore(storeName, IDBOptions(keyPath: "id"))
-            echo "upgrade"
+            discard database.createObjectStore(storeName, IDBOptions(autoIncrement: true, keyPath: "id"))
+            echo "upgraded put"
         request.onsuccess = proc (event: Event) =
             let database = request.result
             let transaction = database.transaction(storeName, "readwrite")
             let obj_store = transaction.objectStore(storeName)
             let obj_req = obj_store.put(obj)
             obj_req.onerror = proc (event: Event) =
-                echo "error"
+                resolve(false)
             obj_req.onsuccess = proc (event: Event) =
-                echo "success"
                 resolve(true)
     return promise
+
+proc delete*(indexedDB: IndexedDB, storeName: cstring, id: cstring): Future[bool] =
+    var promise = newPromise() do (resolve: proc(response: bool)):
+        let request = indexedDB.open(storeName)
+        request.onerror = proc (event: Event) =
+            resolve(false)
+        request.onupgradeneeded = proc (event: Event) =
+            let database = request.result
+            discard database.createObjectStore(storeName, IDBOptions(autoIncrement: true, keyPath: "id"))
+            echo "upgraded delete"
+        request.onsuccess = proc (event: Event) =
+            let database = request.result
+            let transaction = database.transaction(storeName, "readwrite")
+            let obj_store = transaction.objectStore(storeName)
+            let obj_req = obj_store.delete(id)
+            obj_req.onerror = proc (event: Event) =
+                resolve(false)
+            obj_req.onsuccess = proc (event: Event) =
+                resolve(true)
+    return promise
+
