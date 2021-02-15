@@ -10,7 +10,9 @@ BUGS:
 ]#
 
 type
-    Troute = tuple[p: string, c: string]
+    Tguard = ref object # TODO: how to handle??
+
+    Troute = tuple[p: string, c: string, g: Tguard]
 
     Tmethod* = tuple[n: string, f: proc(scope: Tscope)]
 
@@ -37,10 +39,12 @@ type
     TLifecycle* = enum
         Created, Resumed
 
+    Twork = proc(scope: Tscope, lifecycle: Tlifecycle)
+
     Tcontroller* = ref object
-        name*: string
-        view*: string
-        work*: proc(scope: Tscope, lifecycle: Tlifecycle)
+        name: string
+        view: string
+        work: Twork
         scope: Tscope
 
     Tscope* = ref object
@@ -49,6 +53,16 @@ type
         children: seq[Tscope]
         parent: Tscope
         subscriptions: seq[Tsubscription]
+
+#
+# Route, Conroller, etc..
+#
+
+proc newController*(name: string, staticView: static string, work: Twork): Tcontroller =
+    result = Tcontroller(name: name, view: staticView, work: work)
+
+proc newRoute*(path: string, controller: string, guard = Tguard()): Troute =
+    result = (p: path, c: controller, g: guard)
 
 #
 # Scope object

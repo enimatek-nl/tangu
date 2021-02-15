@@ -1,7 +1,9 @@
 import ../src/tangu, json, dom
 
-const static_test = staticRead("view.html")
-let viewTodosController = Tcontroller(name: "viewTodos", view: static_test, work: proc(scope: Tscope, lifecycle: Tlifecycle) =
+let viewTodosController = newController(
+    "viewTodos",
+    staticRead("view.html"),
+    proc(scope: Tscope, lifecycle: Tlifecycle) =
 
     scope.model{"todos"} = scope.root().model{"todos"}
 
@@ -28,12 +30,15 @@ let viewTodosController = Tcontroller(name: "viewTodos", view: static_test, work
                             break
                 )
             ]
+
         of Tlifecycle.Resumed:
             echo "resumed"
 )
 
-const static_test2 = staticRead("add.html")
-let addTodoController = Tcontroller(name: "addTodo", view: static_test2, work: proc(scope: Tscope, lifecycle: Tlifecycle) =
+let addTodoController = newController(
+    "addTodo",
+    staticRead("add.html"),
+    proc(scope: Tscope, lifecycle: Tlifecycle) =
 
     scope.model = %* {
         "done": false,
@@ -72,8 +77,8 @@ let tng = newTangu(
         viewTodosController,
         addTodoController],
     @[
-        (p: "/", c: "viewTodos"),
-        (p: "/add", c: "addTodo")]
+        newRoute("/", "viewTodos"),
+        newRoute("/add", "addTodo")]
 )
 tng.bootstrap()
 
