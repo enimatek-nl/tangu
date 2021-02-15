@@ -31,5 +31,11 @@
       <button class="secondary" tng-click="del_button">delete</button>
     </div>
 
+    <div tng-repeat="extra in extras" class="card fluid">
+      <section>
+        <p tng-bind="extra.text"></p>
+      </section>
+    </div>
+
   </div>
 </div>

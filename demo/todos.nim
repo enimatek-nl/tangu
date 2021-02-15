@@ -1,11 +1,13 @@
-import ../src/tangu, ../dev/fetch
-import asyncjs, jsffi, dom
+import ../src/tangu, asyncjs, jsffi, dom
 
 type
     Todo = ref object of JsObject
         id: int
         content: string
         done: bool
+
+    Extra = ref object of JsObject
+        text: cstring
 
 let loginController = newController(
     "login",
@@ -31,6 +33,11 @@ let viewTodosController = newController(
 
         scope.model.todos = scope.root().model.todos # connect the local 'todos' to the root-scope
         scope.model.intro = "click on the add button to navigate to the add controller"
+
+        scope.model.extras = [
+            Extra(text: "bla"),
+            Extra(text: "werkt dit?")
+        ]
 
         scope.model.fetch_data = bindMethod proc (that: JsObject, scope: Tscope) {.async.} =
             let response = await fetch("https://google.nl")
