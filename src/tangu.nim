@@ -3,13 +3,16 @@ from strutils import split, parseInt
 
 #[
 TODOS:
-- Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
-- Fix scope from cache (make a lifecycle like init and hide / view )
-- Introduce a more central way of configuring the 'root' scope ?
+    - make a 'factory' kind of service that can 'async' handle eg. http ?
+    - Introduce a more central way of configuring the 'root' scope ?
+BUGS:
+    - Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
 ]#
 
 type
-    Troute = tuple[path: string, controller: string]
+    Troute = tuple[p: string, c: string]
+
+    Tmethod* = tuple[n: string, f: proc(scope: Tscope)]
 
     Tangu* = ref object
         directives: seq[Tdirective]
@@ -18,6 +21,9 @@ type
         root: Node
         previous: Node
         scope: Tscope
+
+    Tpending = ref object
+        list: seq[proc()]
 
     Tdirective* = ref object
         name*: string
@@ -29,18 +35,13 @@ type
         last: string
 
     TLifecycle* = enum
-        Created, Resumed, Destroyed
+        Created, Resumed
 
     Tcontroller* = ref object
         name*: string
         view*: string
         work*: proc(scope: Tscope, lifecycle: Tlifecycle)
         scope: Tscope
-
-    Tmethod* = tuple[n: string, f: proc(scope: Tscope)]
-
-    Tpending = ref object
-        list: seq[proc()]
 
     Tscope* = ref object
         model*: JsonNode
@@ -123,35 +124,37 @@ proc controller(self: Tangu, id: string): Tcontroller =
         if controller.name == id: return controller
 
 proc navigate*(self: Tangu, path: string) =
-    for route in self.routes:
-        if route.path == path:
-            # get the controller and refresh the scope
-            let controller = self.controller(route.controller)
-            if controller.scope.isNil():
-                controller.scope = newScope(self.scope)
-                controller.work(controller.scope, Tlifecycle.Created)
-            else:
-                controller.work(controller.scope, Tlifecycle.Resumed)
+    block foundController:
+        for route in self.routes:
+            if route.p == path:
+                # get the controller and refresh the scope
+                let controller = self.controller(route.c)
+                if controller.scope.isNil():
+                    controller.scope = newScope(self.scope)
+                    controller.work(controller.scope, Tlifecycle.Created)
+                else:
+                    controller.work(controller.scope, Tlifecycle.Resumed)
 
-            # Re create the controllers element view based on the parent node
-            let elem = self.root.cloneNode(true)
-            elem.innerHTML = controller.view
-            elem.style.position = "absolute"
-            elem.style.width = "100%"
-            elem.style.height = "100%"
-            elem.style.animation = "fadein 0.5s" # ----------\
-            if not self.previous.isNil(): #                  |
-                let previous = self.previous #              \/
-                previous.style.animation = "fadeout 0.5s" # these animation can be configured later?
-                elem.addEventListener("animationend", proc (ev: Event) =
-                    # clean up old elements
-                    if ev.target.hasAttribute("tng-router"): previous.remove()
-                )
-            self.root.parentNode.insertBefore(elem, self.root)
-            self.finish(controller.scope, elem)
-            # refer to the previous controller for clean/animation etc. purposes
-            self.previous = elem
-            break
+                # Re create the controllers element view based on the parent node
+                let elem = self.root.cloneNode(true)
+                elem.innerHTML = controller.view
+                elem.style.position = "absolute" #/-- better css solution for this?
+                elem.style.width = "100%" #       |
+                elem.style.height = "100%" #      |
+                elem.style.animation = "fadein 0.5s" # ----------\
+                if not self.previous.isNil(): #                  |
+                    let previous = self.previous #              \/
+                    previous.style.animation = "fadeout 0.5s" # these animation can be configured later?
+                    elem.addEventListener("animationend", proc (ev: Event) =
+                        # clean up old elements
+                        if ev.target.hasAttribute("tng-router"): previous.remove()
+                    )
+                self.root.parentNode.insertBefore(elem, self.root)
+                self.finish(controller.scope, elem)
+                # refer to the previous controller for clean/animation etc. purposes
+                self.previous = elem
+                break foundController
+        echo "!! no controller found for path: " & path
 
 proc bootstrap*(self: Tangu) =
     # setup hashbang navigation

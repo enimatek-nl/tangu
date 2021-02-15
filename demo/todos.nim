@@ -30,21 +30,18 @@ let viewTodosController = Tcontroller(name: "viewTodos", view: static_test, work
             ]
         of Tlifecycle.Resumed:
             echo "resumed"
-        of Tlifecycle.Destroyed:
-            echo "destroyed"
 )
 
 const static_test2 = staticRead("add.html")
 let addTodoController = Tcontroller(name: "addTodo", view: static_test2, work: proc(scope: Tscope, lifecycle: Tlifecycle) =
+
+    scope.model = %* {
+        "done": false,
+        "content": ""
+    }
+
     case lifecycle:
         of Tlifecycle.Created:
-            scope.model = %* {
-                "done": false,
-                "content": ""
-            }
-
-            scope.root().model{"title"} = %* "Add Todo"
-
             scope.methods = @[
                 (n: "done_button", f: proc (scope: Tscope) {.closure.} =
 
@@ -59,13 +56,7 @@ let addTodoController = Tcontroller(name: "addTodo", view: static_test2, work: p
             ]
 
         of Tlifecycle.Resumed:
-            scope.model = %* {
-                "done": false,
-                "content": ""
-            }
-
-        of Tlifecycle.Destroyed:
-            echo "destroyed"
+            echo "resumed"
 )
 
 let tng = newTangu(
@@ -81,8 +72,8 @@ let tng = newTangu(
         viewTodosController,
         addTodoController],
     @[
-        (path: "/", controller: "viewTodos"),
-        (path: "/add", controller: "addTodo")]
+        (p: "/", c: "viewTodos"),
+        (p: "/add", c: "addTodo")]
 )
 tng.bootstrap()
 
