@@ -23,6 +23,9 @@ let testController = Tcontroller(name: "test", view: static_test, construct: pro
         (n: "add", f: proc (scope: Tscope) {.closure.} =
             scope.model{"todos"}.elems.add(%* {"msg": scope.model{"todo", "msg"}.str})
             scope.model{"todo", "msg"}.str = ""
+        ),
+        (n: "delete", f: proc (scope: Tscope) {.closure.} =
+            echo "within scope: " & scope.model{"todo", "msg"}.str
         )
     ]
 )
