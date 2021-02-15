@@ -5,9 +5,9 @@ from strutils import split
 TODOS:
 X Fix method execution - scan childern for methods as well (mix parent scopes into child scopes)
 X Get the correct scope within a method (repeat has child scopes which should be passed to parent functions)
+X Test the animated css for pop/push?
 - Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
 - Push/pop pages and store correct scopes in cache?
-X Test the animated css for pop/push?
 ]#
 
 type
@@ -121,32 +121,33 @@ proc navigate*(self: Tangu, path: string) =
             let controller = self.controller(route.controller)
             let scope = self.newScope(controller.name)
             controller.construct(scope)
-
+            # clone the current view
             let elem = document.createElement("div")
             elem.className = "clone"
             elem.style.animation = "fadeout 0.5s" # default animation
             elem.innerHTML = self.root.outerHTML
             self.root.parentNode.appendChild(elem)
-
+            # render the new view
             self.root.style.animation = "slidein 0.5s" # default animation
             self.root.innerHTML = controller.view
             self.finish(scope, self.root)
-
+            # clean up the mess
             self.root.addEventListener("animationend", proc (ev: Event) =
-                elem.remove() # remove the cloned view
-                self.root.style.animation = "" # reset animation on root
+                elem.remove()
+                self.root.style.animation = ""
             )
 
             break
 
 proc bootstrap*(self: Tangu) =
-    # Setup basic listeners and such.
+    # setup hashbang navigation
     window.addEventListener("hashchange", proc (ev: Event) =
         var hash = $(window.location.hash)
         hash = hash.substr(2, hash.len - 1)
         echo "haschange: navigating to: " & hash
         self.navigate(hash)
     )
+    # setup basic animations (TODO for later)
     let style = document.createElement("style")
     style.innerHTML = """
         .clone {
