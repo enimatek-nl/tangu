@@ -14,7 +14,7 @@ let loginController = newController(
     staticRead("login.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) =
 
-    scope.model.login_button = bindMethod proc (that: JsObject, scope: Tscope) {.async.} =
+    scope.model.login_button = bindMethod proc (that: JsObject, scope: Tscope, node: Node) {.async.} =
         scope.root().model.authenticated = true
         window.location.hash = "#!/"
 
@@ -39,15 +39,15 @@ let viewTodosController = newController(
             Extra(text: "werkt dit?")
         ]
 
-        scope.model.fetch_data = bindMethod proc (that: JsObject, scope: Tscope) {.async.} =
+        scope.model.fetch_data = bindMethod proc (that: JsObject, scope: Tscope, node: Node) {.async.} =
             let response = await fetch("https://google.nl")
             echo await response.text()
 
-        scope.model.show_button = bindMethod proc(that: JsObject, scope: Tscope) =
+        scope.model.show_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) =
             echo "clicked me!"
             scope.model.show = true
 
-        scope.model.del_button = bindMethod proc(that: JsObject, scope: Tscope) =
+        scope.model.del_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) =
             for i, s in scope.root().model.todos.to(seq[Todo]):
                 if s.id == scope.model.todo.to(Todo).id:
                     scope.root().model.delete("todos", i)
@@ -64,7 +64,7 @@ let addTodoController = newController(
     scope.model.content = ""
 
     if lifecycle == Tlifecycle.Created:
-        scope.model.done_button = bindMethod proc(that: JsObject, scope: Tscope) =
+        scope.model.done_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) =
             let todo = Todo(
                 id: scope.root().model.todos.to(seq[JsObject]).len,
                 done: scope.model.done.to(bool),
