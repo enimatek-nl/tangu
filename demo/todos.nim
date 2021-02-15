@@ -1,55 +1,71 @@
 import ../src/tangu, json, dom
 
 const static_test = staticRead("view.html")
-let viewTodosController = Tcontroller(name: "viewTodos", view: static_test, construct: proc(scope: Tscope) =
+let viewTodosController = Tcontroller(name: "viewTodos", view: static_test, work: proc(scope: Tscope, lifecycle: Tlifecycle) =
+    case lifecycle:
+        of Tlifecycle.Created:
+            scope.root().model{"title"} = %* "Overview Todos"
+            if scope.root().model{"todos"}.isNil(): scope.root().model{"todos"} = %* []
 
-    scope.root().model{"title"} = %* "Overview Todos"
+            scope.model = %* {
+                "show": false,
+                "intro": "click on the add button to navigate to the add controller",
+                "todos": %*[]
+            }
 
-    scope.model = %* {
-        "show": false,
-        "intro": "click on the add button to navigate to the add controller",
-        "todos": scope.root().model{"todos"}
-    }
+            scope.methods = @[
+                (n: "show_button", f: proc (scope: Tscope) {.closure.} =
+                    echo "clicked me!"
+                    scope.model{"show"} = %* true
+                ),
 
-    scope.methods = @[
-        (n: "show_button", f: proc (scope: Tscope) {.closure.} =
-            echo "clicked me!"
-            scope.model{"show"} = %* true
-        ),
+                (n: "del_button", f: proc (scope: Tscope) {.closure.} =
+                    for i, s in scope.root().model{"todos"}.elems:
+                        if s{"id"}.to(int) == scope.model{"todo", "id"}.to(int):
+                            scope.root().model{"todos"}.elems.delete(i)
+                            break
+                )
+            ]
 
-        (n: "del_button", f: proc (scope: Tscope) {.closure.} =
-            for i, s in scope.root().model{"todos"}.elems:
-                if s{"id"}.to(int) == scope.model{"todo", "id"}.to(int):
-                    scope.root().model{"todos"}.elems.delete(i)
-                    break
-        )
-    ]
+        of Tlifecycle.Resumed:
+            scope.model{"todos"} = scope.root().model{"todos"}
+
+        of Tlifecycle.Destroyed:
+            echo "destroyed"
 )
 
 const static_test2 = staticRead("add.html")
-let addTodoController = Tcontroller(name: "addTodo", view: static_test2, construct: proc(scope: Tscope) =
+let addTodoController = Tcontroller(name: "addTodo", view: static_test2, work: proc(scope: Tscope, lifecycle: Tlifecycle) =
+    case lifecycle:
+        of Tlifecycle.Created:
+            scope.model = %* {
+                "done": false,
+                "content": ""
+            }
 
-    scope.root().model{"title"} = %* "Add Todo"
+            scope.root().model{"title"} = %* "Add Todo"
 
-    scope.model = %* {
-        "done": false,
-        "content": "my todo..."
-    }
+            scope.methods = @[
+                (n: "done_button", f: proc (scope: Tscope) {.closure.} =
 
-    scope.methods = @[
-        (n: "done_button", f: proc (scope: Tscope) {.closure.} =
-            
-            if scope.root().model{"todos"}.isNil(): scope.root().model{"todos"} = %* []
-            
-            scope.root().model{"todos"}.add(%* {
-                "id": scope.root().model{"todos"}.len,
-                "done": scope.model{"done"},
-                "content": scope.model{"content"}}
-            )
+                    scope.root().model{"todos"}.add( %* {
+                        "id": scope.root().model{"todos"}.len,
+                        "done": scope.model{"done"},
+                        "content": scope.model{"content"}}
+                    )
 
-            window.location.hash = "#!/"
-        )
-    ]
+                    window.location.hash = "#!/"
+                )
+            ]
+
+        of Tlifecycle.Resumed:
+            scope.model = %* {
+                "done": false,
+                "content": ""
+            }
+
+        of Tlifecycle.Destroyed:
+            echo "destroyed"
 )
 
 let tng = newTangu(

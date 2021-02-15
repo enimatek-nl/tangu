@@ -1,13 +1,14 @@
 <div>
-<form>
-  <div class="mb-3">
-    <label class="form-label">Content</label>
-    <input tng-model="content" type="text" class="form-control">
+<form class="mui-form">
+  <div class="mui-textfield">
+    <textarea tng-model="content" placeholder="Textarea"></textarea>
   </div>
-  <div class="mb-3 form-check">
-    <input tng-change="done" type="checkbox" class="form-check-input">
-    <label class="form-check-label">Done!</label>
+  <div class="mui-checkbox">
+    <label>
+      <input tng-change="done" type="checkbox" value="" checked>
+      It's done
+    </label>
   </div>
-  <button tng-click="done_button" type="button" class="btn btn-primary">Add</button>
+  <button tng-click="done_button" type="button" class="mui-btn mui-btn--raised">Submit</button>
 </form>
 </div>
