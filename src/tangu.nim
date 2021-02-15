@@ -1,5 +1,5 @@
 import json, dom
-from strutils import split
+from strutils import split, parseInt
 
 #[
 TODOS:
@@ -95,7 +95,7 @@ proc newScope(self: Tangu, name: string): Tscope =
             if scope.n == "root":
                 root = scope.s
                 break searchRoot
-        root = Tscope()
+        root = Tscope(model: %*{})
         self.scopes.add (n: "root", s: root)
         echo "created root scope."
     if name == "root":
@@ -106,7 +106,7 @@ proc newScope(self: Tangu, name: string): Tscope =
                 if scope.n == name:
                     result = scope.s
                     break work
-            result = Tscope(parent: root)
+            result = Tscope(model: %*{}, parent: root)
             self.scopes.add (n: name, s: result)
 
 proc exec(self: Tangu, scope: Tscope, node: Node, pending: Tpending) =
@@ -234,6 +234,23 @@ proc tngRouter*(): Tdirective =
             )
     )
 
+proc tngChange*(): Tdirective =
+    Tdirective(name: "tng-change", callback:
+        proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
+            node.onchange = proc (event: Event) =
+                let elem = Element(node)
+                let splt = valueOf.split(".")
+                if not scope.model{splt}.isNil():
+                    if scope.model{splt}.kind == JInt:
+                        scope.model{splt}.num = parseInt($elem.value)
+                    elif scope.model{splt}.kind == JString:
+                        scope.model{splt}.str = $elem.value
+                    elif scope.model{splt}.kind == JBool:
+                        scope.model{splt}.bval = elem.checked
+                scope.digest()
+
+    )
+
 proc tngModel*(): Tdirective =
     Tdirective(name: "tng-model", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
@@ -241,12 +258,17 @@ proc tngModel*(): Tdirective =
             node.onkeyup = proc (event: Event) =
                 let splt = valueOf.split(".")
                 if not scope.model{splt}.isNil():
-                    scope.model{splt}.str = $node.value
+                    if scope.model{splt}.kind == JString:
+                        scope.model{splt}.str = $node.value
+                    elif scope.model{splt}.kind == JBool:
+                        scope.model{splt}.bval = ($node.value == "true")
                 scope.digest()
 
             scope.subscribe(
                 Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
-                node.value = value.to(string))
+                    if value.kind == JString: node.value = value.to(string)
+                    else: node.value = $value
+                )
             )
     )
 
@@ -256,12 +278,15 @@ proc tngBind*(): Tdirective =
 
             scope.subscribe(
                 Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsonNode) =
-                node.innerHTML = value.to(string))
+                    if value.kind == JString: node.innerHTML = value.to(string)
+                    else: node.innerHTML = $value
+                )
             )
 
             let splt = valueOf.split(".")
             if not scope.model{splt}.isNil():
-                node.innerHTML = scope.model{splt}.to(string)
+                if scope.model{splt}.kind == JArray: node.innerHTML = scope.model{splt}.to(string)
+                else: node.innerHTML = $scope.model{splt}
     )
 
 proc tngRepeat*(): Tdirective =
@@ -272,7 +297,7 @@ proc tngRepeat*(): Tdirective =
             var scopes: seq[Tscope] = @[]
 
             proc render(arr: JsonNode, firstRun: bool) =
-                if arr.kind == JArray:
+                if not arr.isNil() and arr.kind == JArray:
                     var nominated: seq[Node] = @[]
                     for child in parentNode.children:
                         if child.hasAttribute("tng-repeat") or child.hasAttribute("tng-repeat-item"):
