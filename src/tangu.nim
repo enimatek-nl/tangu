@@ -22,7 +22,6 @@ type
 
     Tdirective* = ref object
         name*: string
-        stopOn*: bool # stop on this directive (compile/controller) eg. router needs this
         callback*: proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending)
 
     Tsubscription* = ref object
@@ -79,30 +78,46 @@ proc exec(self: Tscope, n: string, s: Tscope) =
     if not self.parent.isNil:
         self.parent.exec(n, s)
 
+proc root*(self: Tscope): Tscope =
+    if not self.parent.isNil:
+        return self.parent.root()
+    else:
+        return self
+
 #
 # Tangu object
 #
 
 proc newScope(self: Tangu, name: string): Tscope =
-    result = Tscope()
-    self.scopes.add (n: name, s: result)
+    var root: Tscope = nil
+    for scope in self.scopes:
+        if scope.n == "root":
+            root = scope.s
+    if root.isNil:
+        echo "New root scope created."
+        root = Tscope()
+        self.scopes.add (n: "root", s: result)
+    if name == "root":
+        result = root
+    else:
+        block work:
+            for scope in self.scopes:
+                if scope.n == name:
+                    result = scope.s
+                    break work
+            result = Tscope(parent: root)
+            self.scopes.add (n: name, s: result)
 
-proc exec(self: Tangu, scope: Tscope, node: Node, pending: Tpending): bool =
+proc exec(self: Tangu, scope: Tscope, node: Node, pending: Tpending) =
     for attr in node.attributes:
         for dir in self.directives:
             if dir.name == attr.nodeName:
                 dir.callback(self, scope, node, $attr.nodeValue, pending)
-                if dir.stopOn:
-                    return false
-    return true
 
-proc compile(self: Tangu, scope: Tscope, child: Node, pending: Tpending): bool {.discardable.} =
-    if self.exec(scope, child, pending):
-        for node in child.children:
-            if not self.compile(scope, node, pending):
-                return false
-        return true
-    return false
+proc compile(self: Tangu, scope: Tscope, child: Node, pending: Tpending) =
+    self.exec(scope, child, pending)
+    for node in child.children:
+        self.compile(scope, node, pending)
 
 proc finish(self: Tangu, scope: Tscope, parent: Node) =
     let pending = Tpending() # execute this after parent node is done setting up.
@@ -143,8 +158,8 @@ proc bootstrap*(self: Tangu) =
     # setup hashbang navigation
     window.addEventListener("hashchange", proc (ev: Event) =
         var hash = $(window.location.hash)
+        echo "hashchange: " & hash
         hash = hash.substr(2, hash.len - 1)
-        echo "haschange: navigating to: " & hash
         self.navigate(hash)
     )
     # setup basic animations (TODO for later)
@@ -167,6 +182,7 @@ proc bootstrap*(self: Tangu) =
     document.head.appendChild(style);
     let scope = self.newScope("root")
     self.finish(scope, document.children[0])
+    echo "Done bootstrapping tangu-spa"
 
 proc newTangu*(directives: seq[Tdirective], controllers: seq[Tcontroller], routes: seq[Troute]): Tangu =
     Tangu(directives: directives, controllers: controllers, routes: routes)
@@ -211,10 +227,13 @@ proc tngClick*(): Tdirective =
     )
 
 proc tngRouter*(): Tdirective =
-    Tdirective(name: "tng-router", stopOn: true, callback:
+    Tdirective(name: "tng-router", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
             self.root = node
-            self.navigate(valueOf)
+            pending.list.add(proc () =
+                window.location.hash = "#!" & valueOf
+                self.navigate(valueOf)
+            )
     )
 
 proc tngModel*(): Tdirective =
