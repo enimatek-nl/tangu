@@ -6,14 +6,32 @@
     <i>span bind to 'foo'</i>
     <span tng-bind="foo"></span><br>
 
-    <button tng-click="button">show YES!</button><br>
+    <div>
 
-    <div tng-if="show">
-        <h1>YES!</h1>
+        <button tng-click="button">show YES!</button><br>
+
+        <div tng-if="show">
+            <h1>YES!</h1>
+        </div>
+
+        <div tng-repeat="item in list">
+            <span tng-bind="item.msg"></span>
+        </div>
+
     </div>
 
-    <div tng-repeat="item in list">
-        <span tng-bind="item.msg"></span>
+    <div>
+
+        <h2>todo example</h2>
+
+        <input tng-model="todo.msg" type="text">
+        <button tng-click="add">Add</button>
+
+        <i>todos</i><br>
+        <div tng-repeat="todo in todos">
+            <span tng-bind="todo.msg"></span>
+        </div>
+
     </div>
 
 </div>

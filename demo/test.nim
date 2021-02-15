@@ -9,12 +9,20 @@ let testController = Tcontroller(name: "test", view: static_test, construct: pro
             {"msg": "this is a"},
             {"msg": "this is b"},
             {"msg": "this is c"}
-        ]
+        ],
+        "todos": [],
+        "todo": {
+            "msg": ""
+        }
     }
     scope.methods = @[
         (n: "button", f: proc (scope: Tscope) {.closure.} =
             echo "clicked me!"
             scope.model{"show"}.bval = true
+        ),
+        (n: "add", f: proc (scope: Tscope) {.closure.} =
+            scope.model{"todos"}.elems.add(%* {"msg": scope.model{"todo", "msg"}.str})
+            scope.model{"todo", "msg"}.str = ""
         )
     ]
 )
