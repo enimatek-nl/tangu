@@ -341,32 +341,35 @@ proc tngChange*(): Tdirective =
 proc tngModel*(): Tdirective =
     Tdirective(name: "tng-model", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
+            # check if the value exists else just ignore all bindings
+            let obj = scope.model.get(valueOf)
+            if not obj.isNil:
+                # some elements only have values onchange
+                node.onchange = proc (event: Event) =
+                    let elem = Element(node)
+                    if elem.nodeName == "CHECKBOX" or elem.nodeName == "SELECT":
+                        if scope.model.set(valueOf, toJs elem.value):
+                            scope.digest()
 
-            node.onchange = proc (event: Event) =
-                let elem = Element(node)
-                if $elem.getAttribute("type") == "checkbox":
-                    if scope.model.set(valueOf, toJs(elem.value)):
+                # inputs can better be handled by onkeyup
+                node.onkeyup = proc (event: Event) =
+                    if scope.model.set(valueOf, toJs(node.value)):
                         scope.digest()
 
-            node.onkeyup = proc (event: Event) =
-                if scope.model.set(valueOf, toJs(node.value)):
-                    scope.digest()
-
-            scope.subscribe(
-                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) = node.value = value.to(cstring))
-            )
+                scope.subscribe(
+                    Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) = node.value = value.to(cstring))
+                )
     )
 
 proc tngBind*(): Tdirective =
     Tdirective(name: "tng-bind", callback:
         proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
-
-            scope.subscribe(
-                Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) = node.value = value.to(cstring))
-            )
-
+            # check if the valueOf exists in the model - else skip
             let obj = scope.model.get(valueOf)
             if not obj.isNil:
+                scope.subscribe(
+                    Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) = node.value = value.to(cstring))
+                )
                 node.innerHTML = obj.to(cstring)
     )
 
@@ -409,7 +412,10 @@ proc tngRepeat*(): Tdirective =
 
                             child_scope.model = JsObject{$parts[0]: item}
 
-                            self.compile(child_scope, clone, Tpending())
+                            let child_pender = TPending()
+                            self.compile(child_scope, clone, child_pender)
+                            for p in child_pender.list:
+                                p()
 
                     if firstRun:
                         pending.list.add(work)
@@ -426,3 +432,34 @@ proc tngRepeat*(): Tdirective =
                 render(obj, true)
     )
 
+proc tngAttr*(): Tdirective =
+    Tdirective(name: "tng-attr", callback:
+        proc(self: Tangu, scope: Tscope, node: Node, valueOf: string, pending: Tpending) =
+
+            var onlyWhen = true
+            var parts = valueOf.split(" when ")
+            if parts.len == 1:
+                parts = valueOf.split(" is ")
+                onlyWhen = true
+
+
+            if parts.len == 2:
+                # check if the model contains the parts - else skip this code
+                let obj = scope.model.get(parts[1])
+                if not obj.isNil:
+                    proc handleAttr(v: JsObject) =
+                        let b = v.to(bool)
+                        if onlyWhen:
+                            if b:
+                                node.setAttribute(parts[0], "")
+                            else:
+                                node.removeAttribute(parts[0])
+                        else:
+                            node.setAttribute(parts[0], v.to(cstring))
+                    # subscribe to the given value
+                    scope.subscribe(Tsubscription(name: parts[1], callback: proc (scope: Tscope, value: JsObject) = handleAttr(value)))
+                    # first run must be done 'pending'
+                    pending.list.add(proc () = handleAttr(obj))
+            else:
+                echo "cannot parse '" & valueOf & "'"
+    )
