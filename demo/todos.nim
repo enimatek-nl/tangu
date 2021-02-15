@@ -16,8 +16,12 @@ let viewTodosController = Tcontroller(name: "viewTodos", view: static_test, cons
             echo "clicked me!"
             scope.model{"show"} = %* true
         ),
+
         (n: "del_button", f: proc (scope: Tscope) {.closure.} =
-            echo $scope.model{"todo", "id"}
+            for i, s in scope.root().model{"todos"}.elems:
+                if s{"id"}.to(int) == scope.model{"todo", "id"}.to(int):
+                    scope.root().model{"todos"}.elems.delete(i)
+                    break
         )
     ]
 )
@@ -34,13 +38,15 @@ let addTodoController = Tcontroller(name: "addTodo", view: static_test2, constru
 
     scope.methods = @[
         (n: "done_button", f: proc (scope: Tscope) {.closure.} =
-            echo "done!"
+            
             if scope.root().model{"todos"}.isNil(): scope.root().model{"todos"} = %* []
+            
             scope.root().model{"todos"}.add(%* {
                 "id": scope.root().model{"todos"}.len,
                 "done": scope.model{"done"},
                 "content": scope.model{"content"}}
             )
+
             window.location.hash = "#!/"
         )
     ]
