@@ -1,5 +1,5 @@
 import asyncjs, sequtils, jsffi, dom
-import tangu, tangu/fetch, tangu/mediadevices, tangu/indexeddb
+import tangu, tangu/mediadevices, tangu/indexeddb
 
 type
     Todo = ref object
@@ -16,9 +16,10 @@ let loginController = newController(
     staticRead("login.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
-        scope.model.login_button = bindMethod proc (that: JsObject) {.async.} =
-            scope.root().model.authenticated = true
-            window.location.hash = "#!/"
+        if lifecycle == Tlifecycle.Created:
+            scope.model.login_button = bindMethod proc (that: JsObject) {.async.} =
+                scope.root().model.authenticated = true
+                window.location.hash = "#!/"
 )
 
 let viewTodosController = newController(
@@ -69,6 +70,10 @@ let viewTodosController = newController(
                 discard await indexedDB().put("todos", toJs todo)
                 await doFilter(scope)
             
+        if lifecycle == Tlifecycle.Resumed:
+            scope.model.filter = "all"
+            scope.model.todos = await indexedDB().getAll("todos")
+
 )
 
 let addTodoController = newController(
@@ -76,24 +81,21 @@ let addTodoController = newController(
     staticRead("add.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
-        # reset the form input
-        scope.model.done = false
-        scope.model.content = ""
-
         if lifecycle == Tlifecycle.Created:
+            scope.model.content = ""
 
             scope.model.camera_button = bindMethod proc (that: JsObject) {.async.} =
-                echo "STUB; cache current input and go to view..."
                 window.location.hash = "#!/camera"
 
             scope.model.done_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) {.async.} =
                 let todo = Todo(
                     id: genId(),
-                    done: true,
+                    done: false,
                     content: scope.model.content.to(cstring)
                 )
 
                 if await indexedDB().put("todos", toJs todo):
+                    scope.model.content = ""
                     window.location.hash = "#!/"
 )
 
@@ -103,10 +105,15 @@ let cameraTodoController = newController(
     staticRead("camera.html"),
     proc(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
-        scope.model.add_button = bindMethod proc (that: JsObject) {.async.} =
-            echo "add!"
+        if lifecycle == Tlifecycle.Created:
 
-        scope.model.start_button = bindMethod proc (that: JsObject) {.async.} =
+            scope.model.add_button = bindMethod proc (that: JsObject) {.async.} =
+                echo "add!"
+
+            scope.model.start_button = bindMethod proc (that: JsObject) {.async.} =
+                echo "picture"
+
+        if lifecycle == Tlifecycle.Initialized:
             let stream = await mediaDevices().getUserMedia(JsObject{video: true})
             let elem = document.getElementById("video")
             elem.setStream(stream)
