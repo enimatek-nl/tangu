@@ -2,7 +2,7 @@ import dom, jsffi, asyncjs, tables
 from strutils import split, parseInt
 
 #
-# Extra DOM/JS bindings
+# Helpfull DOM / JS bindings
 #
 proc jsIsArray*(x: JsObject): bool {.importcpp: "Array.isArray(#)".}
 proc jsStringify*(x: JsObject): cstring {.importcpp: "JSON.stringify(#)".}
@@ -42,6 +42,31 @@ proc delete*(self: JsObject, path: string, index: int) =
     var objs = self.get(path).to(seq[JsObject])
     objs.delete(index)
     discard self.set(path, toJs objs)
+
+#
+# (basic) Fetch definitions
+#
+type
+    FetchResponse = ref object of RootObj
+        url: cstring
+        ok: bool
+        status: cint
+        statusText: cstring
+        headers: JsObject
+
+    FetchOptions = ref object of RootObj
+        `method`*: cstring
+        mode*: cstring
+        cache*: cstring
+        credentials*: cstring
+        headers*: JsObject
+        redirect*: cstring
+        referrerPolicy*: cstring
+        body*: cstring
+
+proc fetch*(url: cstring): Future[FetchResponse] {.importcpp: "fetch(#)".}
+proc json*(self: FetchResponse): Future[JsObject] {.importcpp.}
+proc text*(self: FetchResponse): Future[cstring] {.importcpp.}
 
 #
 # Tangu types

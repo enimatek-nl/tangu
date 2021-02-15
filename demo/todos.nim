@@ -32,7 +32,7 @@ let viewTodosController = newController(
         scope.model.todos = scope.root().model.todos # connect the local 'todos' to the root-scope
         scope.model.intro = "click on the add button to navigate to the add controller"
 
-        scope.model.clicked = bindMethod proc (that: JsObject, scope: Tscope) {.async.} =
+        scope.model.fetch_data = bindMethod proc (that: JsObject, scope: Tscope) {.async.} =
             let response = await fetch("https://google.nl")
             echo await response.text()
 
