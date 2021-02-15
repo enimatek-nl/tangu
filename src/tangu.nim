@@ -1,14 +1,6 @@
 import dom, jsffi
 from strutils import split, parseInt
 
-#[
-TODOS:
-    - make a 'factory' kind of service that can 'async' handle eg. http ?
-    - Introduce a more central way of configuring the 'root' scope ?
-BUGS:
-    - Fix the -node- af derective replaces or updates (grabs the incorrect ones now when doing eg. two repeats in one parent node)
-]#
-
 #
 # Extra DOM/JS bindings
 #
@@ -38,6 +30,18 @@ proc get*(self: JsObject, path: string): JsObject =
         else:
             return
     result = s
+
+proc add*[T](self: JsObject, path: string, item: T) =
+    ## Easy way to add an object into the `JsObject` defined array
+    var objs = self.get(path).to(seq[T])
+    objs.add(item)
+    discard self.set(path, toJs objs)
+
+proc delete*(self: JsObject, path: string, index: int) =
+    ## Easy way to remove an index from the `JsObject` defined array
+    var objs = self.get(path).to(seq[JsObject])
+    objs.delete(index)
+    discard self.set(path, toJs objs)
 
 #
 # Tangu types
@@ -311,7 +315,7 @@ proc tngChange*(): Tdirective =
                 if scope.model.set(valueOf, toJs(elem.value)):
                     scope.digest()
                 else:
-                    echo valueOf & " not found" 
+                    echo valueOf & " not found"
     )
 
 proc tngModel*(): Tdirective =
@@ -324,10 +328,10 @@ proc tngModel*(): Tdirective =
 
             scope.subscribe(
                 Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) =
-                    #if value.kind == JString: node.value = value.to(string)
-                    #else: node.value = $value
-                    node.value = value.to(cstring)
-                )
+                #if value.kind == JString: node.value = value.to(string)
+                #else: node.value = $value
+                node.value = value.to(cstring)
+            )
             )
     )
 
@@ -337,10 +341,10 @@ proc tngBind*(): Tdirective =
 
             scope.subscribe(
                 Tsubscription(name: valueOf, callback: proc (scope: Tscope, value: JsObject) =
-                    #if value.kind == JString: node.innerHTML = value.to(string)
-                    #else: node.innerHTML = $value
-                    node.value = value.to(cstring)
-                )
+                #if value.kind == JString: node.innerHTML = value.to(string)
+                #else: node.innerHTML = $value
+                node.value = value.to(cstring)
+            )
             )
 
             let obj = scope.model.get(valueOf)
