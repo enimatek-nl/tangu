@@ -1,14 +1,24 @@
-<div>
-<form class="mui-form">
-  <div class="mui-textfield">
-    <textarea tng-model="content" placeholder="Textarea"></textarea>
-  </div>
-  <div class="mui-checkbox">
-    <label>
-      <input tng-change="done" type="checkbox" value="" checked>
-      It's done
-    </label>
-  </div>
-  <button tng-click="done_button" type="button" class="mui-btn mui-btn--raised">Submit</button>
-</form>
+<div class="mui-appbar">
+  <table width="100%">
+    <tr style="vertical-align:middle;">
+      <td class="mui--appbar-height">
+        <i class="mui--text-title fa fa-angle-left"></i>
+        <span class="mui--text-title">Back</span>
+      </td>
+    </tr>
+  </table>
+</div>
+<div class="mui-container">
+  <form class="mui-form">
+    <div class="mui-textfield">
+      <textarea tng-model="content" placeholder="Textarea"></textarea>
+    </div>
+    <div class="mui-checkbox">
+      <label>
+        <input tng-change="done" type="checkbox" value="" checked>
+        It's done
+      </label>
+    </div>
+    <button tng-click="done_button" type="button" class="mui-btn mui-btn--raised">Submit</button>
+  </form>
 </div>
