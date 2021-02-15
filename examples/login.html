@@ -1,19 +1,37 @@
-<header class="sticky">
-  <a href="#" class="logo">Login</a>
-</header>
-
-
-<div class="row padded">
-  <div class="col-sm-12 col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3">
-    <form>
-
-      <div class="input-group vertical">
-        <input type="text" placeholder="Username" />
-        <input type="password" placeholder="Password" />
-      </div>
-
-      <button tng-click="login_button" class="primary">Login</button>
-
-    </form>
+<nav class="navbar is-fixed-top is-dark" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <!-- navbar items, navbar burger... -->
   </div>
+</nav>
+
+<div class="container">
+<div class="section">
+
+    <div class="field">
+      <p class="control has-icons-left has-icons-right">
+        <input class="input" type="email" placeholder="Email">
+        <span class="icon is-small is-left">
+          <i class="fas fa-envelope"></i>
+        </span>
+      </p>
+    </div>
+
+    <div class="field">
+      <p class="control has-icons-left">
+        <input class="input" type="password" placeholder="Password">
+        <span class="icon is-small is-left">
+          <i class="fas fa-lock"></i>
+        </span>
+      </p>
+    </div>
+
+    <div class="field">
+      <p class="control">
+        <button class="button is-block is-fullwidth is-success" tng-click="login_button">
+          Login
+        </button>
+      </p>
+    </div>
+
+</div>
 </div>

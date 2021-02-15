@@ -1,41 +1,57 @@
-<header class="sticky">
-  <a href="#!/" class="logo">Todos</a>
-</header>
 
-<div class="row padded">
-  <div class="col-sm-12 col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+<nav class="navbar is-fixed-top is-dark" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+    </div>
+    <div class="navbar-menu is-active">
+      <div class="navbar-start">
+      </div>
+      <div class="navbar-end">
+      </div>
+    </div>
+</nav>
 
-    <video id="video" width="320" height="240" autoplay></video>
-    <button tng-click="start_camera">Start camera!</button>
-    <button tng-click="fetch_data">Fetch data!</button>
+<div class="container">
+ <div class="section">
+  <div class="row columns is-multiline">
 
-    <div class="card">
-      <section tng-if="show">
-        <h3>Can you see me?</h3>
-        <p>This section suppose to be hidden!</p>
-      </section>
-      <button tng-click="show_button">show</button>
+    <div class="column is-4">
+        <div class="card is-large">
+            <video id="video" width="320" height="240" autoplay></video>
+            <button class="button is-block is-fullwidth" tng-click="start_camera">Start camera!</button>
+            <button class="button is-block is-fullwidth" tng-click="fetch_data">Fetch data!</button>
+        </div>
+    </div>
+
+    <div class="column is-4">
+        <div class="card is-large">
+          <section tng-if="show">
+            <h3>Can you see me?</h3>
+            <p>This section suppose to be hidden!</p>
+          </section>
+          <button class="button is-block is-fullwidth" tng-click="show_button">show</button>
+        </div>
+    </div>
+
+
+    <div tng-repeat="todo in todos" class="column is-4">
+        <div class="card is-large">
+         <div class="select">
+          <section>
+            <p tng-bind="todo.content"></p>
+          </section>
+         </div>
+          <button class="button is-block is-fullwidth is-primary" tng-click="del_button">delete</button>
+        </div>
+    </div>
+
+    <div class="column is-4">
+        <div class="card is-large">
+            <select tng-model="selected">
+                <option tng-repeat="extra in extras" tng-attr="selected when extra.selected" tng-bind="extra.text"></option>
+            </select>
+        </div>
     </div>
 
   </div>
-</div>
-
-<div class="row padded">
-  <div class="col-sm-12 col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-    <a href="#!/add" class="button primary">Add +</a>
-
-    <div tng-repeat="todo in todos" class="card fluid">
-      <section>
-        <p tng-bind="todo.content"></p>
-      </section>
-      <button class="secondary" tng-click="del_button">delete</button>
-    </div>
-
-    <div  class="card fluid">
-        <select tng-model="selected">
-            <option tng-repeat="extra in extras" tng-attr="selected when extra.selected" tng-bind="extra.text"></option>
-        </select>
-    </div>
-
-  </div>
+ </div>
 </div>
