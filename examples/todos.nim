@@ -1,12 +1,12 @@
-import asyncjs, jsffi, dom, tangu, tangu/fetch, tangu/mediadevices
+import asyncjs, jsffi, dom, tangu, tangu/fetch, tangu/mediadevices, tangu/indexeddb
 
 type
-    Todo = ref object
-        id: int
-        content: string
+    Todo = ref object of JsObject
+        id: cint
+        content: cstring
         done: bool
 
-    Extra = ref object
+    Extra = ref object of JsObject
         text: cstring
         selected: bool
 
@@ -42,6 +42,15 @@ let viewTodosController = newController(
             Extra(text: "tag", selected: true)
         ]
 
+        scope.model.save_db = bindMethod proc (that: JsObject) {.async.} =
+            let ok = await saveToIndexedDB("todos", Todo(id: 1, content: "asd", done: false))
+            echo "save to db " & $ok
+
+        scope.model.load_db = bindMethod proc (that: JsObject) {.async.} =
+            let item = await loadFromIndexedDB("todos", 1)
+            echo jsStringify(item)
+            echo "load from db"
+
         scope.model.start_camera = bindMethod proc (that: JsObject) {.async.} =
             let stream = await mediaDevices().getUserMedia(JsObject{video: true})
             let elem = document.getElementById("video")
@@ -74,9 +83,9 @@ let addTodoController = newController(
     if lifecycle == Tlifecycle.Created:
         scope.model.done_button = bindMethod proc(that: JsObject, scope: Tscope, node: Node) =
             let todo = Todo(
-                id: scope.root().model.todos.to(seq[JsObject]).len,
+                id: cint scope.root().model.todos.to(seq[JsObject]).len,
                 done: scope.model.done.to(bool),
-                content: scope.model.content.to(string)
+                content: scope.model.content.to(cstring)
             )
 
             scope.root().model.add("todos", todo)
