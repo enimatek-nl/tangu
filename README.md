@@ -8,7 +8,7 @@ It's like angular, mithril.js or vuejs but made in `nim` and uses `json` to pass
 
 ### Changes
 
-  - *****0.2.0** Big improvement to `tng-repeat` also introduces `#!` navigation between controllers and `animates` the transition. `tng-onchange` is added and `scopes` now have a common `root` and methodcalls are passed down their `children`
+  - ***0.2.0** Big improvement to `tng-repeat` also introduces `#!` navigation between controllers and `animates` the transition. `tng-onchange` is added and `scopes` now have a common `root` and methodcalls are passed down their `children`
   - **0.1.0** Initial publish
 
 ### About
