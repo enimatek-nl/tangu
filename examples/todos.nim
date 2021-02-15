@@ -16,7 +16,7 @@ proc loginController(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
 
     if lifecycle == Tlifecycle.Created:
         scope.model.login_button = bindMethod proc (that: JsObject) {.async.} =
-            scope.root().model.authenticated = true
+            scope.root().model.authenticated = truepl
             window.location.hash = "#!/"
 
 
@@ -90,10 +90,10 @@ proc cameraTodoController(scope: Tscope, lifecycle: Tlifecycle) {.async.} =
     if lifecycle == Tlifecycle.Created:
 
         scope.model.add_button = bindMethod proc (that: JsObject) {.async.} =
-            echo "add!"
+            echo "stub: add"
 
         scope.model.start_button = bindMethod proc (that: JsObject) {.async.} =
-            echo "picture"
+            echo "stub: picture"
 
     if lifecycle == Tlifecycle.Initialized:
 
