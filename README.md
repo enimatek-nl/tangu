@@ -6,6 +6,9 @@ A client side single page javascript web app framework (SPA) in nim (js)
 
 It's like angularjs / mithril.js / vuejs but made in `nim js` and uses `jsffi` to pass data between javascript and the nim code.
 Check out the [minimal code example](https://github.com/enimatek-nl/tangu/wiki) in wiki.
+Or check the `examples/` folder for a simple todos app made with tangu.
+
+[![alt text](examples/todos.gif)](https://github.com/enimatek-nl/tangu/tree/main/examples)
 
 ### Changes
 Check the [Releases](https://github.com/enimatek-nl/tangu/releases) for details about the changes between each version.
@@ -27,9 +30,9 @@ Planned features and research subjects to complete the framework as a production
 - [X] rebuild core based on `jsffi`
 - [X] add `fetch` with async/await capabilities
 - [X] implement a default indexedDB service for persisting `JsObject`
+- [X] add `nimble` tasks 
 - [ ] implement a base service for PWA management (?)
 - [ ] improve and add directives
-- [X] add `nimble` tasks 
 - [ ] cli to run a local server or setup project
 - [ ] research cordova compatibility
 
