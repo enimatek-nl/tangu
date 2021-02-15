@@ -1,4 +1,4 @@
-import dom, jsffi
+import dom, jsffi, asyncjs
 from strutils import split, parseInt
 
 #

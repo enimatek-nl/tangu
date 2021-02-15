@@ -1,4 +1,5 @@
-import ../src/tangu, jsffi, dom
+import ../src/tangu, ../dev/fetch
+import asyncjs, jsffi, dom
 
 type
     Todo = ref object of JsObject
@@ -30,7 +31,13 @@ let viewTodosController = newController(
         scope.model["todos"] = scope.root().model["todos"] # connect the local 'todos' to the root-scope
         scope.model["intro"] = "click on the add button to navigate to the add controller"
 
-        scope.methods.add newMethod("show_button", proc (scope: Tscope) {.closure.} =
+        proc someMethodImpl(): void {.async.} =
+            let response = await fetch("https://google.nl")
+
+
+        scope.model.clicked = bindMethod someMethodImpl
+        
+        scope.methods.add newMethod("show_button", proc (scope: Tscope) {.async, closure.} =
             echo "clicked me!"
             scope.model["show"] = true
         )
