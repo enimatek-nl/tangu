@@ -11,7 +11,7 @@ proc jsTimestamp*(): cint {.importcpp: "Date.now()".}
 proc jsHexId*(): cstring {.importcpp: "Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)".}
 proc genId*(): string =
     result = $jsHexId() & "-" & $jsHexId() & "-" & $jsHexId() & "-" & $jsHexId()
-
+    
 proc set*(self: JsObject, path: string, val: JsObject): bool =
     ## Look for the `path` in the `JsObject` and overwrite the value
     var s = self
