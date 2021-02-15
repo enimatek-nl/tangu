@@ -7,12 +7,24 @@
 
 <main class="container">
 
+    <div class="card mb-3">
+        <select tng-model="selected" tng-change="new_filter" class="form-select">
+          <option tng-repeat="extra in extras" tng-attr="selected when extra.selected" tng-bind="extra.text"></option>
+        </select>
+    </div>
+
     <div tng-repeat="todo in todos" class="card text-dark bg-warning mb-3">
       <div class="card-header">Todo</div>
       <div class="card-body">
         <p tng-bind="todo.content" class="card-text"></p>
       </div>
       <div class="card-body">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" tng-change="check_todo" tng-attr="checked when todo.done" id="flexCheckDefault">
+          <label class="form-check-label" for="flexCheckDefault">
+              Is Done
+          </label>
+        </div>
         <div class="d-grid gap-2 col-6 mx-auto">
           <button tng-click="del_button" class="btn btn-danger">remove</button> 
         </div>
@@ -40,14 +52,6 @@
             <p>This section suppose to be hidden!</p>
           </section>
           <button class="button is-block is-fullwidth" tng-click="show_button">show</button>
-        </div>
-    </div>
-
-    <div class="column is-4">
-        <div class="card is-large">
-            <select tng-model="selected">
-                <option tng-repeat="extra in extras" tng-attr="selected when extra.selected" tng-bind="extra.text"></option>
-            </select>
         </div>
     </div>
 
