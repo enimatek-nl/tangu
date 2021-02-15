@@ -1,4 +1,4 @@
-# Tangu
+# <img src="https://user-images.githubusercontent.com/77200435/105724995-baaa8500-5f28-11eb-94ff-70ffa5e8511a.png" height="28px"/> Tangu
 
 A client side single page javascript web app framework (SPA) in nim (js)
 
