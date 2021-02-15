@@ -1,30 +1,16 @@
 import dom, jsffi, asyncjs
 
-type
-    MediaDevices {.importc.} = ref object of EventTarget
-
-    MediaStream {.importc.} = ref object of RootObj
-
-    ServiceWorkerContainer {.importc.} = ref object of RootObj
-    ServiceWorkerRegistration {.importc.} = ref object of RootObj
-
-    NavigatorMD* = ref object of Navigator
-        mediaDevices*: MediaDevices
-        serviceWorker*: ServiceWorkerContainer
-
-proc register*(self: ServiceWorkerContainer, scriptURL: cstring): Future[ServiceWorkerRegistration] {.importcpp.}
-
-proc getUserMedia*(self: MediaDevices, constraints: JsObject): Future[MediaStream] {.importcpp.}
-proc setStream*(self: Element, stream: MediaStream) {.importcpp: "#.srcObject = #".}
 
 
 var window* {.importc, nodecl.}: WindowDB
 var navigator* {.importc, nodecl.}: NavigatorMD
 
+    ServiceWorkerContainer {.importc.} = ref object of RootObj
+    ServiceWorkerRegistration {.importc.} = ref object of RootObj
+
+        serviceWorker*: ServiceWorkerContainer
+
 proc main(): Future[void] {.async.} =
-    let stream = await navigator.mediaDevices.getUserMedia(JsObject{video: true})
-    let elem = document.getElementById("video")
-    elem.setStream(stream)
 
     let request = window.indexedDB.open("test.db")
 
